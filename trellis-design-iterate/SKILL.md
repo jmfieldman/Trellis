@@ -11,6 +11,8 @@ Before doing anything, read the [Design Plan Documents — Authoring Guide](../t
 
 Then read the existing design plan file at $0.
 
+If the path is not provided, tell the user they invoked the skill incorrectly, and stop.
+
 If the user has not provided any other information (other than the invoking this skill): stop and tell the user you are ready to here their input for the next round of design doc iteration.
 
 If the user has provided additional detail along with this skill invocation: you can use that as input to start the next round of iteration.
