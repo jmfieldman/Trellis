@@ -1,6 +1,7 @@
 ---
 name: trellis-impl-create
-description: Create a new Implementation Plan [$0=source-design-plan] [$1=output-impl-path]
+description: Create a new Implementation Plan
+argument-hint: <source-design-plan> <output-impl-path>
 disable-model-invocation: true
 ---
 
@@ -19,6 +20,8 @@ A new directory at the user-supplied path, containing:
 - `overview.md` — populated framing, philosophy, locked feature-wide decisions, sprint roster + dependency graph, initial Open Questions, and a `Round 1` Status entry.
 - `progress.md` — master checklist scaffolded with one section per sprint (steps left blank or as best-effort placeholders).
 - One stub file per sprint — `01-<topic>.md`, `02-<topic>.md`, … — each containing at minimum: Goal, Prerequisites, Deliverables (best-effort first cut), Out of scope, and an initial sprint-level Open Questions list.
+
+**Do not create `post-mortem.md` at Round 1.** That file is created lazily — the first sprint to ship creates it in the same PR that checks off its final step. Scaffolding an empty `post-mortem.md` in Round 1 is noise. See `implementation-plan.md` § "`post-mortem.md` anatomy" for the format.
 
 The implementation plan is **not** complete after Round 1. Step-level detail, Architecture notes, API surfaces, locked sprint decisions, and Acceptance checklists land in subsequent rounds.
 
@@ -52,31 +55,11 @@ If any of these are missing, **stop and ask the user** before producing files. D
 
 1. Read the design plan end to end.
 2. Read [implementation-plan.md](./implementation-plan.md) end to end. Pay particular attention to the "Architecture is inherited, not prescribed" section — it governs how examples in this skill are interpreted.
-3. **Read the project's `CLAUDE.md` and any analogue implementation plans the user pointed to** (or that you find adjacent to the design plan). **Extract the project's architecture from these sources** before any planning:
-   - The layering the codebase uses (e.g., schemas / repositories / managers / resources for a backend service; design tokens / atoms / molecules / organisms for a UI library; core engine / subcommand handlers / CLI surface for a command-line tool; reducer / selector / view for a state-machine app; module / submodule / fixture for an infra-as-code project).
-   - The directory layout conventions, file-naming conventions, casing.
-   - The test layering and what each layer covers.
-   - The build / spec / generation workflow.
-   - The observability and error-handling conventions.
-   - The known-footgun set surfaced by prior plans, code-review threads, or post-mortems.
+3. **Read the project's `CLAUDE.md` and any analogue implementation plans the user pointed to** (or that you find adjacent to the design plan). Extract the project's architecture per the checklist in [implementation-plan.md § "Architecture is inherited, not prescribed"](./implementation-plan.md#architecture-is-inherited-not-prescribed) — layering, directory conventions, test layering, build/spec workflow, observability, known-footgun set. The implementation plan you're about to scaffold inherits this architecture; it is not your job to invent one.
 
-   The implementation plan you're about to scaffold inherits this architecture. **It is not your job to invent one.** If the project doesn't have an obvious convention for some axis (e.g., no public API surface; no schema), the implementation plan simply doesn't have that section.
+4. **Sketch a sprint roster** privately (in scratch / planning context). Begin from the natural seam-lines the *feature* decomposes along *given this project's architecture*. Adopt whatever sequence the project already implies — typically foundation → logic → capability → integration → async → surface → hardening, but the exact shape is stack-specific. Deviations should be deliberate and called out in `overview.md`'s sprint-order rationale.
 
-4. **Sketch a sprint roster** privately (in scratch / planning context). Begin from the natural seam-lines the *feature* decomposes along *given this project's architecture*. The decomposition is project-specific:
-   - Backend service: typically **schema → repositories → managers → resources / endpoints → cross-service contracts → workers / async → UX / surfaces → hardening**.
-   - Frontend app: typically **design tokens / primitives → atoms → molecules → screens → flows / state → polish**.
-   - CLI: typically **core engine → subcommand routing → individual commands → completion / docs → distribution**.
-   - Infrastructure: typically **state / providers → core resources → composed modules → environment wiring → observability → runbooks**.
-   - Library: typically **core API → adapters → integration helpers → published types / docs → release polish**.
-
-   Adopt whatever sequence the project already implies. Deviations from that sequence should be deliberate and called out in `overview.md`'s sprint-order rationale. Aim for sprints that:
-   - Each ship a coherent, independently-testable deliverable.
-   - Each leave the codebase buildable, type-checking, and test-passing.
-   - Each fit within roughly one to two weeks of focused work for a single engineer.
-   - Form a directed graph where each sprint depends only on prior sprints (cycles are a slicing bug).
-   - Are sequenced so foundational layers (schema, repositories) land before logic (managers), which lands before surfaces (resources, endpoints, UX).
-
-   Don't over-optimize for equal sizes — sprints are equal in **shippability**, not in scope.
+   See [implementation-plan.md § "Sizing heuristics for sprint slicing"](./implementation-plan.md#sizing-heuristics-for-sprint-slicing) for archetypes (Foundation / Logic-layer / Capability / Integration / Helper / Async / Surface / Hardening), the slicing heuristics (when to split foundation, when to fold a thin logic layer, etc.), and the calibration anchors (5–12 sprints, 5–10 steps/sprint, ≤2 deliverables → fold, 15+ → re-slice). The criteria each sprint must satisfy (coherent, buildable, ~1–2 weeks, DAG, foundational-before-surface) live in that same guide under "Rationale for sprint-sized slices."
 
 5. **Identify the cross-cutting decisions** that should live in `overview.md`'s "Feature-wide locked decisions" table. These are the choices every sprint would otherwise re-decide. The exact list depends on the project — pull them from the design plan's foundational decisions plus the project's conventions. Examples from a backend-service shape (translate to your stack): schema location, default-view filters, soft-delete posture, worker cadence, idempotency-key shape, banned patterns, cross-schema FK rule. Examples from a frontend project: design-token sources, store / cache library, routing strategy, accessibility-test thresholds, banned UI primitives. The principle is the same: pin the choices that, left unpinned, would be re-litigated in every sprint.
 
@@ -119,7 +102,7 @@ Populate every section the implementation plan spec lists, scaled to what's actu
 - **Out-of-scope across all sprints** — the list you assembled in Step A.
 - **Open questions** — anything from the design plan still marked open that affects sprint shape, plus any new questions surfaced by the slicing discussion in Step B.
 - **Decisions log** — start empty, or with `(R1)`-tagged entries that capture the slicing decisions agreed in Step B.
-- **Status** — one entry: `**Round 1**: scaffolding + sprint roster + open questions enumerated.`
+- **Status** — one entry: `**Round 1**: scaffolding + sprint roster + open questions enumerated. _Next:_ <one-line recommended Round 2 focus — usually "lock Sprint 01 to execution-ready" or, if a particular Open question gates Sprint 01, the question ID + tag + scope>.` The `_Next:_` clause persists the chat hand-off recommendation into the doc itself so a user resuming via `trellis-impl-iterate` recovers it without depending on chat history.
 - **What this plan does *not* try to do** — short list at overview level, distinct from per-sprint Out of scope.
 - **How to read each sprint** — the standard one-paragraph blurb pointing at the sprint anatomy.
 
@@ -189,37 +172,6 @@ Stop. Don't auto-progress to Round 2.
 
 ---
 
-## Sizing heuristics for sprint slicing
-
-Use these as guard-rails when sketching the roster. Heuristic, not strict.
-
-**Typical shape.** 5–12 sprints per feature; 5–10 steps per sprint. A step is roughly half a day of focused work; a sprint is roughly one to two weeks. Real plans drift from these numbers and that's fine — they're calibration anchors, not targets. If the roster comes out at 3 sprints, the slicing is probably too coarse; if it comes out at 20, the slicing is probably too fine (or some sprints should be folded).
-
-**Common sprint archetypes.** Most sprints fall into one of a handful of shapes; recognizing which archetype you're slicing helps name the deliverables and the test surface. The archetypes below are stack-agnostic; the *content* of each in your project depends on the architecture you extracted in Step A:
-
-- **Foundation sprints** — establish primitives the rest of the plan builds on. (Backend: schema + repositories. Frontend: design tokens + base components. CLI: argument parser + core engine. Infra: providers + state + base modules.) No external surface yet; verification is invariant tests.
-- **Logic-layer sprints** — non-trivial business rules built on the foundation, with no public surface yet. (Backend: managers. Frontend: hooks / state machines. CLI: command-engine logic.) Fold into the foundation sprint when the layer is thin.
-- **Capability sprints** — ship one user-or-system-visible capability end-to-end. (Backend: an endpoint. Frontend: a screen / flow. CLI: a subcommand. Library: a public function or class.) Built on prior foundation and logic. Usually one capability per sprint, sometimes a tightly-coupled pair (e.g., provision + complete).
-- **Integration / contract sprints** — wire one component into another (post-commit fan-out into a peer service; a screen into the routing graph; a CLI command into shell completion; a Terraform module into an environment wiring). The risk surface is the seam; integration tests dominate.
-- **Helper / predicate sprints** — small, narrowly-scoped landing of a shared utility. Often a single helper + a focused test matrix.
-- **Async / background sprints** — workers, jobs, scheduled tasks, queues. One worker per sprint when they're large.
-- **Surface / polish sprints** — visible product surface or final ergonomics. Usually late, after the substrate stabilizes.
-- **Hardening sprints** — quotas, rate limits, observability, runbook docs, accessibility audits, performance budgets, spec / docs reconciliation. Always last; don't fold into earlier sprints.
-
-**Slicing heuristics** (illustrated with backend examples; translate to your stack):
-
-- **Foundation work** is usually one sprint, sometimes two. If the substrate spans many independent primitives with non-trivial constraints, splitting may be warranted (e.g., one for entity tables, one for engagement / junction tables).
-- **Logic-layer work** is typically a sprint of its own when there are non-trivial rules (e.g., supersession, soft-delete cascade, idempotency, multi-step orchestration). When the logic layer is a thin pass-through, fold it into the foundation sprint.
-- **Capability work** is sliced by capability seam, not by individual route / function. Group capabilities that share an underlying component or a transactional shape; split when authorization / permission stories diverge meaningfully.
-- **Async / background work** is usually its own sprint, sometimes one per worker if they're large.
-- **Integration / cross-component work** is its own sprint when it involves more than one peer or when the contract is novel.
-- **Surface / UX work** is typically late, after the data model and reads stabilize.
-- **Hardening** is the last sprint. Don't fold into earlier sprints — it's load-bearing as a deliberate last-pass.
-
-If a sprint's Deliverables list runs to ~15+ artifacts, it's probably too big — re-slice. If a sprint has ≤ 2 Deliverables and shares a clear seam with a neighbor, it's probably too small — fold.
-
----
-
 ## Quality bar for Round 1
 
 When the scaffold is done, the user should be able to:
@@ -250,6 +202,7 @@ What's explicitly *not* expected after Round 1:
 - **Don't create the `00-overview.md` legacy filename.** The canonical name is `overview.md`. (Older plans in the repo may still use `00-overview.md`; new plans don't.)
 - **Don't paraphrase the design plan into one giant sprint.** Re-derive sprint structure from outcomes (what ships when), not from the design plan's section list. A roster that mirrors the design plan's chapter headings isn't slicing — it's re-titling, and it loses the entire point of the implementation plan.
 - **Don't write "implementation details TBD"** anywhere in a stub. That phrase is a planning failure dressed up as humility. Either lock the call, surface it as an Open Question with rationale, or name the future round / sprint that closes it.
+- **Don't pre-create `post-mortem.md`.** It's created lazily when the first sprint ships, not at scaffold time.
 
 ---
 
@@ -272,3 +225,19 @@ After the scaffold is written, message the user along these lines:
 Explain that per-sprint steps are not created until the broader sprint open questions are answered to enough degree that you are confident in your ability to generate accurate sub-steps.
 
 Stop and wait for the user's direction.
+
+---
+
+## Additional Instructions
+
+Before executing this skill, read and apply Trellis instructions from these sources, in ascending order of precedence:
+
+1. `~/.trellis/instructions.md`
+2. `<repo-root>/.trellis/instructions.md`
+3. Additional instructions included with this skill invocation
+
+`<repo-root>` is the root of the current Git repository. Missing instruction files are normal; skip them silently.
+
+If instructions conflict, later sources override earlier sources. Invocation-specific instructions apply only to the current run and have the highest precedence.
+
+These instructions may override this skill document, but they must not override system, developer, tool, safety, or repository policy instructions.

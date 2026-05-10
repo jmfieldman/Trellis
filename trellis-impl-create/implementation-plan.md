@@ -38,6 +38,17 @@ This guide describes the **structure** of an implementation plan — what files 
 
 Before scaffolding or fleshing out a plan, the agent reads both. The patterns the implementation plan adopts — naming, layering, test posture, observability hooks, build workflow, deployment surface, what counts as "shipped" — are inherited from the project. They are not invented by the planner.
 
+Concretely, extract from those sources:
+
+- The layering the codebase uses (e.g., schemas / repositories / managers / resources for a backend service; design tokens / atoms / molecules / organisms for a UI library; core engine / subcommand handlers / CLI surface for a command-line tool; reducer / selector / view for a state-machine app; module / submodule / fixture for an infra-as-code project).
+- The directory layout conventions, file-naming conventions, casing.
+- The test layering and what each layer covers.
+- The build / spec / generation workflow.
+- The observability and error-handling conventions.
+- The known-footgun set surfaced by prior plans, code-review threads, or post-mortems.
+
+This extraction is load-bearing in every round, not just at scaffold time: re-slicing mid-stream, locking a sprint's Key Design Decisions, or adding a new sprint all re-derive against the same conventions.
+
 Examples throughout this spec lean on a backend-service shape (schemas, repositories, managers, resources, HTTP endpoints, OpenAPI specs, database migrations, transactions, signed URLs) because the precedent plans this guide was built from were backend services. **Treat those as illustrative, not prescriptive.** When implementing for a different kind of project — a frontend app, a CLI, a mobile client, a library, an infrastructure module, a data pipeline — translate every backend-specific example into its equivalent in that stack:
 
 - A schema sprint becomes a design-tokens sprint, or a CLI-engine sprint, or a Terraform-module sprint.
@@ -71,6 +82,7 @@ A round generally goes:
 6. **Purge obsolete prose.** When a decision invalidates earlier wording, delete the old wording — don't leave both versions side-by-side.
 7. **Append a Status entry** for the round summarizing what changed.
 8. **Ensure internal consistency.** Rewriting one sprint may leak inconsistency into adjacent sprints (a new dependency, a deferred concern, a renamed helper). Either fix the consequence in the same round or add a note to Open questions for next round.
+9. **Emit a completeness assessment to chat** at the end of the round (see § "Round-end completeness assessment"). This is the agent's recommendation on how close the directory is to "the next sprint can be picked up cold and shipped," what's still load-bearing-open, and which nits the user may want to resolve before handing the plan off to an implementer.
 
 ### Round 1 — scaffolding
 
@@ -129,6 +141,39 @@ A reader should never have to guess whether a piece of a sprint is the long-term
 
 ---
 
+## Sizing heuristics for sprint slicing
+
+Use these as guard-rails when sketching the initial roster — and when re-slicing mid-stream. Heuristic, not strict.
+
+**Typical shape.** 5–12 sprints per feature; 5–10 steps per sprint. A step is roughly half a day of focused work; a sprint is roughly one to two weeks. Real plans drift from these numbers and that's fine — they're calibration anchors, not targets. If the roster comes out at 3 sprints, the slicing is probably too coarse; if it comes out at 20, the slicing is probably too fine (or some sprints should be folded).
+
+**Common sprint archetypes.** Most sprints fall into one of a handful of shapes; recognizing which archetype you're slicing helps name the deliverables and the test surface. The archetypes below are stack-agnostic; the *content* of each in your project depends on the architecture extracted from the project's conventions:
+
+- **Foundation sprints** — establish primitives the rest of the plan builds on. (Backend: schema + repositories. Frontend: design tokens + base components. CLI: argument parser + core engine. Infra: providers + state + base modules.) No external surface yet; verification is invariant tests.
+- **Logic-layer sprints** — non-trivial business rules built on the foundation, with no public surface yet. (Backend: managers. Frontend: hooks / state machines. CLI: command-engine logic.) Fold into the foundation sprint when the layer is thin.
+- **Capability sprints** — ship one user-or-system-visible capability end-to-end. (Backend: an endpoint. Frontend: a screen / flow. CLI: a subcommand. Library: a public function or class.) Built on prior foundation and logic. Usually one capability per sprint, sometimes a tightly-coupled pair (e.g., provision + complete).
+- **Integration / contract sprints** — wire one component into another (post-commit fan-out into a peer service; a screen into the routing graph; a CLI command into shell completion; a Terraform module into an environment wiring). The risk surface is the seam; integration tests dominate.
+- **Helper / predicate sprints** — small, narrowly-scoped landing of a shared utility. Often a single helper + a focused test matrix.
+- **Async / background sprints** — workers, jobs, scheduled tasks, queues. One worker per sprint when they're large.
+- **Surface / polish sprints** — visible product surface or final ergonomics. Usually late, after the substrate stabilizes.
+- **Hardening sprints** — quotas, rate limits, observability, runbook docs, accessibility audits, performance budgets, spec / docs reconciliation. Always last; don't fold into earlier sprints.
+
+**Slicing heuristics** (illustrated with backend examples; translate to your stack):
+
+- **Foundation work** is usually one sprint, sometimes two. If the substrate spans many independent primitives with non-trivial constraints, splitting may be warranted (e.g., one for entity tables, one for engagement / junction tables).
+- **Logic-layer work** is typically a sprint of its own when there are non-trivial rules (e.g., supersession, soft-delete cascade, idempotency, multi-step orchestration). When the logic layer is a thin pass-through, fold it into the foundation sprint.
+- **Capability work** is sliced by capability seam, not by individual route / function. Group capabilities that share an underlying component or a transactional shape; split when authorization / permission stories diverge meaningfully.
+- **Async / background work** is usually its own sprint, sometimes one per worker if they're large.
+- **Integration / cross-component work** is its own sprint when it involves more than one peer or when the contract is novel.
+- **Surface / UX work** is typically late, after the data model and reads stabilize.
+- **Hardening** is the last sprint. Don't fold into earlier sprints — it's load-bearing as a deliberate last-pass.
+
+**Too big / too small.** If a sprint's Deliverables list runs to ~15+ artifacts, it's probably too big — re-slice. If a sprint has ≤ 2 Deliverables and shares a clear seam with a neighbor, it's probably too small — fold.
+
+**During iteration.** Re-slicing is normal once sprint-level work begins. When a round surfaces that a sprint is too large, too small, or sequenced wrong, apply these heuristics and follow the supersession + `progress.md` regeneration steps in "How the document set is produced."
+
+---
+
 ## Directory layout
 
 The implementation plan lives in a single directory. By convention, the directory is named after the feature/subsystem:
@@ -137,6 +182,7 @@ The implementation plan lives in a single directory. By convention, the director
 .plans/<feature-name>/
 ├── overview.md
 ├── progress.md
+├── post-mortem.md         # created lazily; first appears when the first sprint ships
 ├── 01-<topic>.md
 ├── 02-<topic>.md
 ├── …
@@ -146,6 +192,7 @@ The implementation plan lives in a single directory. By convention, the director
 Rules:
 - `overview.md` is required. It's the entry point — `progress.md` and every sprint file links back to it.
 - `progress.md` is required. It is the master checklist that humans scan to see "what's done."
+- `post-mortem.md` is created the first time a sprint's final step is checked off — not at scaffold time. It accrues a distilled, sprint-keyed entry per shipped sprint. See "`post-mortem.md` anatomy" for the format.
 - Sprint files are zero-padded numerically prefixed (`01-`, `02-`, …) so directory order matches execution order. Re-numbering on a re-slice is fine.
 - Sprint file names are `<NN>-<short-kebab-topic>.md` — short enough that the index table reads cleanly, descriptive enough that a `git log` line is meaningful.
 - One file per sprint. Don't split a sprint across two files; if a sprint is too large to fit comfortably in one file, that's a re-slice signal.
@@ -216,7 +263,14 @@ A frontend project might also pin design-token sources and accessibility-test th
 Two subsections:
 
 - **Rationale for the sprint order** — one paragraph per sprint explaining why it sits where it does in the sequence and what it unlocks.
-- **Rationale for sprint-sized slices** — a short statement of the slicing principle ("one architectural seam or one user-visible capability; reviewable as one PR; leaves the repo buildable"). Acknowledges that sprints are not equal in size — they're equal in **shippability**.
+- **Rationale for sprint-sized slices** — a short statement of the slicing principle. Aim for sprints that:
+  - Each ship a coherent, independently-testable deliverable.
+  - Each leave the codebase buildable, type-checking, and test-passing.
+  - Each fit within roughly one to two weeks of focused work for a single engineer.
+  - Form a directed graph where each sprint depends only on prior sprints (cycles are a slicing bug).
+  - Are sequenced so foundational layers land before logic, which lands before surfaces.
+
+  Sprints are not equal in size — they're equal in **shippability**. See the "Sizing heuristics for sprint slicing" section for calibration anchors and archetypes.
 
 ### 7. Sprint roster + dependency graph
 
@@ -248,6 +302,28 @@ Followed by a one-line bullet per edge explaining *why* sprint X depends on spri
 
 A table of decisions that apply across **every** sprint — the ones every sprint would otherwise re-litigate. Sprint-level decision tables refine these but never override them.
 
+The table is dense, deliberately. It's the "stop-relitigating-this" surface. When a sprint's locked decisions section says "see overview decision X," the answer should be in here.
+
+**Categories that typically earn rows** (project-agnostic — pull the ones that apply to *your* stack from the project's conventions; drop the rest; add categories the project enforces but this list doesn't enumerate):
+
+| Category                       | What it pins                                                                       |
+| ------------------------------ | ---------------------------------------------------------------------------------- |
+| Durable-state location         | Where the system stores its persistent data (schema file, store module, state file, terraform module path). |
+| Lifecycle markers              | How rows / records / entities express their lifecycle (soft-delete column, status enum, archive flag, cache eviction policy). |
+| Default-view / default-read    | The filter every "default" read applies (active-only, non-archived, current-tenant, current-environment). |
+| Async / background cadence     | When background work runs (cron schedule, debounce window, queue worker concurrency). |
+| Idempotency-key shape          | How retry-safe surfaces are gated (deterministic key derivation, dedup window, replay tolerance). |
+| Banned patterns                | Things no sprint may introduce (hand-written migrations; specific imports; specific globals; specific frameworks). |
+| Generated-spec sync source     | Which artifact is canonical when multiple representations exist (OpenAPI, GraphQL SDL, exported types, regenerated docs, man pages). |
+| Test-layer assignment          | Which test layer owns which seam (unit / integration / smoke / visual / e2e), where each lives. |
+| Logging / metric naming        | Logger choice, category-prefix or trace-attribute conventions, metric-name format. |
+| Error vocabulary               | The set of error codes / exit codes / domain-error classes the plan commits to.    |
+| Feature-flag / gating posture  | "None — if it isn't ready, it isn't merged" vs. specific flag-system + naming.     |
+
+#### Concrete example (project-specific — translate to your stack)
+
+> The table below is taken from a backend-service plan in a Next.js / Drizzle / Graphile-Worker codebase. The shapes, file paths, and identifiers are deliberately specific to that project — they will not match yours. The *categories* (rows) generalize; the *values* (right column) almost certainly don't. Do not copy values verbatim.
+
 ```
 | Decision                  | Value                                                                            |
 | ------------------------- | -------------------------------------------------------------------------------- |
@@ -259,7 +335,24 @@ A table of decisions that apply across **every** sprint — the ones every sprin
 | …                         | …                                                                                |
 ```
 
-This table is dense, deliberately. It's the "stop-relitigating-this" surface. When a sprint's locked decisions section says "see overview decision X," the answer should be in here.
+#### Parallel example (different stack)
+
+> The same categories, populated for a frontend-app plan in a React / Tanstack Query / Vite codebase. Different values, same shape — the table is a stack-translation exercise, not a copy job.
+
+```
+| Decision                  | Value                                                                            |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| Durable-state location    | `src/state/<feature>/store.ts` (Zustand slice; persisted via `idb-keyval`)       |
+| Lifecycle markers         | `archivedAt: number \| null` on entity rows; **no** hard-delete in the client    |
+| Default-view filter       | `archivedAt === null && tenantId === currentTenantId` in every list selector     |
+| Async / background cadence| Tanstack Query: `staleTime: 30_000`; refetch on focus only for "live" surfaces   |
+| Idempotency-key shape     | `crypto.randomUUID()` per mutation, attached to the optimistic-update record     |
+| Banned patterns           | (a) Direct `fetch` outside the SDK layer. (b) `any` in public component props.   |
+| Generated-spec sync source| `openapi-typescript`-generated types; sprint that touches the API regenerates.    |
+| …                         | …                                                                                |
+```
+
+Pick the categories that apply to your project, populate them with values pulled from your project's conventions, and drop the rest. The number of rows that actually appear in a real plan is usually 10–25 — fewer is a planning-failure signal (most decisions are still implicit), more is a sign you're locking sprint-scoped decisions at the overview level.
 
 ### 9. Out-of-scope across all sprints
 
@@ -287,13 +380,18 @@ Bulleted list of cross-cutting decisions made during prior rounds, each tagged w
 
 ### 12. Status
 
-Round-by-round audit trail at the overview level:
+Round-by-round audit trail at the overview level. Each entry has two clauses — what changed, and a `_Next:_` clause naming the recommended next-round focus:
 
 ```
-- **Round 1**: scaffolding + sprint roster + open questions enumerated.
-- **Round 2**: foundational decisions table locked; Sprint 01 fleshed out.
-- **Round 3**: Sprint 06 split into 06-resolve and 07-deduplicate; cron cadence locked.
+- **Round 1**: scaffolding + sprint roster + open questions enumerated. _Next:_ lock Sprint 01 to execution-ready.
+- **Round 2**: foundational decisions table locked; Sprint 01 fleshed out. _Next:_ lock Sprint 02 — resolve the supersession-cascade question (Q4 [blocks-impl]) first.
+- **Round 3**: Sprint 06 split into 06-resolve and 07-deduplicate; cron cadence locked. _Next:_ resolve the worker-idempotency-key shape (overview Q11 [blocks-v1]) before touching Sprint 07.
 ```
+
+Clause discipline:
+
+1. **What changed.** Summary of resolutions / re-slices / supersessions in this round. Cite supersessions explicitly (`R5 supersedes R3's helper-in-Sprint-06 decision`).
+2. **`_Next:_` clause** — a one-line italic tail naming the recommended next-round focus. Cite Open question IDs + tags + scope when relevant (`overview Q4 [blocks-v1]`, `Sprint 03 Q2 [blocks-impl]`). This persists the between-rounds recommendation into the doc itself, so a user resuming via `trellis-impl-iterate` recovers the prior recommendation without depending on chat history. When the plan is complete, the `_Next:_` clause is `hand off to implementation` (or `run trellis-impl-review first`).
 
 ### 13. What this plan does *not* try to do
 
@@ -444,6 +542,8 @@ Each step is its own subsection. Ordered. Self-contained.
 
 **Goal**: one sentence — what this step delivers when done.
 
+**Build/test boundary**: omitted when the step leaves the repo compilable and testable; required when it does not. If present, it must say this step may leave the code uncompilable / untestable, why that cannot be avoided, and which later step restores the gates.
+
 **Actions**:
 
 1. Concrete action with file paths and code samples where helpful.
@@ -457,13 +557,14 @@ Each step is its own subsection. Ordered. Self-contained.
 - How to confirm this step is correct (tests, type checks, manual checks, psql commands).
 ```
 
-The four headings — **Goal / Actions / Deliverables / Verification** — are mandatory for every step. They make a step graspable in 30 seconds and unambiguous when executed.
+The four headings — **Goal / Actions / Deliverables / Verification** — are mandatory for every step. They make a step graspable in 30 seconds and unambiguous when executed. **Build/test boundary** is usually omitted, but becomes mandatory for the rare step that cannot leave the repo compilable and testable.
 
 Step content guidance:
 
 - **Code samples are encouraged.** When a column shape, an index predicate, a transaction skeleton, or a Zod schema is the actual decision, write the code. Don't paraphrase it. A junior engineer should rarely have to reach for the design plan to disambiguate.
 - **Inline gotchas — "Subtle bug:" lines.** Promote them above prose when the implementer would otherwise stumble. Examples: index ordering (`.desc()` belongs in the column list, not the WHERE), tx-aborted state (use ON CONFLICT, don't catch 23505), enum CHECK comparison form, drizzle vs SQL casing collisions.
 - **Cross-step / cross-sprint dependency notes.** When a helper this step ships is consumed by a later sprint, say so. When this step depends on a helper already shipped, say so.
+- **Every step should be a compilable/testable boundary.** Slice steps so each completed step can be committed without leaving the code uncompilable, untypecheckable, or untestable. If a temporary violation absolutely cannot be avoided, the step must include a **Build/test boundary** paragraph naming the expected failure, why no safer slicing exists, and the later step that restores the repo to a green state.
 - **Verification per step is non-negotiable.** "How do I know this step is done?" must have a concrete answer — a test name, a `yarn check:types` run, an SQL query, a manual smoke test. "It compiles" is not verification.
 - **Optional Pre-step block.** When a step has setup that must happen before the actions begin (a policy matrix to confirm with a peer, an env var to source), call it out as a `**Pre-step —**` paragraph between Goal and Actions.
 - **Step sizing.** A step is roughly half a day's focused work. If it balloons past that, split it; if it's under an hour and shares a seam with a neighbor, fold it. Step counts of 5–10 per sprint are typical.
@@ -518,6 +619,8 @@ Per-step deviations between the original plan and what shipped, captured inline 
 
 After-the-fact notes that don't affect the contract but are worth preserving — naming-convention drift, a partially-mitigated risk, a follow-up worth filing. These are stylistic / non-actionable observations that future maintainers benefit from but that don't gate sprint acceptance.
 
+**Distillation into `post-mortem.md`.** When the sprint's final step is checked off (i.e., the sprint ships), distill this section into a sprint-keyed entry in the directory's top-level `post-mortem.md`. Create the file if it doesn't yet exist; otherwise append a new section for this sprint. The inline Post Mortem section in the sprint file remains the authoritative long-form record; `post-mortem.md` is the cross-sprint reading surface so reviewers can scan all post mortems in one place without opening every sprint file. The distillation lands in the same PR that ships the sprint's final step. See "`post-mortem.md` anatomy" below.
+
 ---
 
 ## `progress.md` anatomy
@@ -554,6 +657,43 @@ Rules:
 - The per-sprint Progress section in each sprint file is kept in lockstep with `progress.md` — the per-sprint copy is for in-context reading; `progress.md` is for the bird's-eye scan.
 - When sprints are re-sliced or steps are re-ordered, `progress.md` is regenerated in the same round.
 - Don't add narrative or commentary here. `progress.md` is a checklist, not a status report.
+
+---
+
+## `post-mortem.md` anatomy
+
+`post-mortem.md` is the cross-sprint, distilled, after-the-fact reading surface. It accrues one section per shipped sprint, in sprint order. A reader who wants to know "what surprised us across this whole feature?" reads this file end to end.
+
+It is **not** a status log, a deviation log, or a re-statement of the sprint's Post Mortem section. It's the *distilled* summary — three to ten bullets per sprint, written for someone who didn't ship the sprint and isn't going to read the sprint file.
+
+Skeleton:
+
+```markdown
+# <Feature> — Post Mortems
+
+> Part of the [<Feature> Implementation Plan](./overview.md).
+
+## Sprint 01 — <title>
+
+- <distilled observation, lesson, or follow-up>
+- <distilled observation, lesson, or follow-up>
+- …
+
+## Sprint 02 — <title>
+
+- <distilled observation, lesson, or follow-up>
+- …
+```
+
+Rules:
+
+- One section per shipped sprint, in sprint order. The heading matches the sprint file's title (`Sprint NN — <title>`).
+- The file is created the first time a sprint ships. It does not exist during Round 1 scaffolding.
+- A new sprint section is appended in the **same PR** that checks off that sprint's final step. Don't batch.
+- The entry is a *distillation* of the sprint file's Post Mortem section, not a copy. Strip names, drop step-level minutiae, keep observations a future maintainer would want to know.
+- If a sprint had nothing post-mortem-worthy, write `- _No post-mortem-worthy observations._` as the section's only bullet — don't omit the section. The presence of every shipped sprint as a heading is the index humans use to confirm coverage.
+- Don't edit prior sprint sections retroactively. If a later sprint surfaces context that recolors an earlier sprint's post mortem, add it to the current sprint's section with a back-reference (`Re Sprint 03: …`).
+- Don't add narrative connective tissue between sprint sections. `post-mortem.md` is a list of distilled per-sprint summaries, not an essay.
 
 ---
 
@@ -630,12 +770,15 @@ export const measurementTypes = schema.table('measurement_types', {
 - **Don't auto-resolve the user's open questions.** When a question requires a judgment call, surface alternatives and let the user choose. The agent's job is to frame the call sharply, not to make it.
 - **Don't append `(resolved)` tags inside Open questions.** Move the entry to Decisions log.
 - **Don't ship a sprint that leaves the codebase in a half-broken state.** If a sprint can't merge cleanly, it's a re-slice signal — split it differently or fold it into its dependent.
+- **Don't slice steps that require uncompilable / untestable intermediate commits unless there is no viable alternative.** If unavoidable, the step owns an explicit Build/test boundary note with the expected failure, rationale, and repair step.
 - **Don't pre-commit to step counts in Round 1.** Sprint stubs in Round 1 may not have steps yet. That's fine; they get fleshed out in subsequent rounds.
 - **Don't write "implementation details TBD."** That's a planning failure dressed up as humility. Lock the decision, surface it as an Open Question with rationale, or name the future sprint that closes it.
 - **Don't paper over conflicts** between the design plan and prior sprint decisions. Flag the conflict and resolve it before the sprint proceeds; silent reconciliation produces two sources of truth.
 - **Don't write tests as an afterthought.** Each step's Verification block names specific assertions. A step whose Verification is "tests pass" is under-specified.
 - **Don't paraphrase the design plan into one giant sprint.** Re-derive sprint structure from outcomes (what ships when), not from chapter headings of the design plan. A sprint roster that mirrors the design plan's section list isn't slicing — it's re-titling.
 - **Don't bury the layer-vs-boundary error-mapping decision.** Domain errors live in the inner layer; user-facing-code mapping lives at the boundary. The boundary step documents the mapping table explicitly. (In a backend service: managers throw, resources map to HTTP. In a CLI: the engine throws, the command-handler maps to exit codes. Adapt.)
+- **Don't ship a sprint's final step without distilling its Post Mortem into `post-mortem.md`.** The cross-sprint reading surface is load-bearing for future maintainers; skipping the distillation forces them to grep every sprint file. If the sprint genuinely has nothing post-mortem-worthy, append the heading with `_No post-mortem-worthy observations._` — silent omission is the failure mode, not a bare bullet.
+- **Don't pre-create `post-mortem.md` at scaffold time.** The file appears the first time a sprint ships. An empty `post-mortem.md` in a Round 1 directory is noise.
 
 ---
 
@@ -676,6 +819,92 @@ Re-slicing is normal. When it happens:
 
 ---
 
+## Round-end completeness assessment
+
+After every round (including Round 1), the agent emits a completeness assessment to chat. This is **not** part of any file in the directory — it's a chat-only recommendation that helps the user decide whether to keep iterating, run an external review, or hand the plan off to an implementer.
+
+The assessment is the agent's honest read on the plan's state. It is allowed to be opinionated; the user is allowed to disagree. Do not pad the "complete" verdict to be polite, and do not list every minor wording quirk to look thorough.
+
+Implementation plans differ from design plans in two important ways for completeness:
+
+1. **Implementation plans are a directory of files**, not a single doc. "Complete" requires every required file to be present and consistent with the others.
+2. **Implementation plans are sequential by design**. Sprint 01 may be execution-ready while Sprint 06 is still a stub — that's normal and not a defect. The completeness assessment grades the directory's *current readiness for the next unshipped sprint*, not the readiness of every file equally.
+
+### When an implementation plan is "complete enough"
+
+There are three different "complete enough" thresholds; the assessment picks the most relevant one for the round just finished.
+
+**Scaffold-complete** — Round 1 has just landed:
+
+- `overview.md` is populated per the spec — title, framing, philosophy, architectural invariants, module/directory layout, cross-sprint conventions, sprint organization rationale, sprint roster (with one-line outcomes), dependency graph, feature-wide locked decisions table, out-of-scope across all sprints, open questions, decisions log (start empty or with R1 entries), Status (`Round 1: scaffolding…`), what this plan does *not* try to do, how to read each sprint.
+- One stub sprint file per roster entry, each with at least Goal, Prerequisites, Deliverables (best-effort first cut), Out of scope (forward-linked to owner sprints), and Open questions.
+- `progress.md` has one section per sprint, no step bullets yet.
+- No `post-mortem.md` (it's created lazily when the first sprint ships).
+- The sprint roster slicing is agreed with the user.
+
+**Sprint-NN-execution-ready** — the round just locked Sprint NN:
+
+- Sprint NN's stub has graduated to a full sprint file: Locked Decisions table populated (10–25 rows; not a single row), Architecture notes ("Why X" subsections) for non-obvious shape decisions, Public surface sketched (when applicable) with request/response shapes and an error table, Progress checklist, Implementation Steps (5–10) each with Goal/Actions/Deliverables/Verification, Step Dependency Chart, Acceptance checklist.
+- Every step is sliced as a compilable/testable boundary, or explicitly includes a Build/test boundary note explaining the unavoidable temporary breakage and the later step that restores it.
+- Every step's Verification names specific assertions, commands, or test names — not "tests pass" / "compiles."
+- `progress.md`'s Sprint NN section is in lockstep with the sprint file's Progress section.
+- Sprint NN's Prerequisites all match a prior sprint's Deliverables (or a peer-service surface that exists, or an audit-or-build branch).
+- Sprint NN's Out-of-scope items each forward-link to a sprint that owns them.
+- Sprint NN's Open questions are empty *or* contain only items that don't block this sprint's execution.
+
+**Plan-complete** — every sprint is execution-ready:
+
+- Every sprint file has cleared the Sprint-NN-execution-ready bar.
+- The dependency graph in `overview.md` agrees with every sprint's Prerequisites list.
+- The cross-sprint coherence checks (overview locked decisions vs. sprint locked decisions; module-tree drift; convention drift; invariant honoring) all pass.
+- `progress.md` reflects the full step structure.
+- Open Questions at every scope are empty *or* contain only items explicitly deferred with rationale.
+- Decisions log and Status log are coherent across `overview.md` and every sprint file.
+- Tone and conventions clean — no marketing words, no design-level rationale leaking into sprints, no implementation-spec specifics leaking up to the overview.
+
+If the round didn't aim at a specific sprint (e.g., it was a feedback-incorporation round across many files), grade against whichever threshold the directory's overall state best matches.
+
+### What to emit after each round
+
+The chat output uses this exact structure (one block, terse, no preamble):
+
+```markdown
+### Round <N> — completeness assessment
+
+**Verdict**: <not-yet-complete | substantially-complete | complete>
+**Threshold graded**: <scaffold-complete | sprint-NN-execution-ready | plan-complete>
+
+**What's still load-bearing-open** *(if not complete; omit otherwise)*:
+- <file or sprint + section + the gap>
+- …
+
+**Top nits worth resolving before declaring done** *(if substantially-complete or complete; omit otherwise)*:
+- <file + section + the wording / consistency / coverage issue>
+- …
+
+**Recommended next-round focus**:
+- <one-line recommendation; usually the load-bearing-open items, or "lock Sprint NN+1" if the current sprint is execution-ready, or "hand off to implementation" if plan-complete>
+```
+
+Verdict semantics (relative to the chosen threshold):
+
+- **`not-yet-complete`**: At least one load-bearing item from the threshold's checklist is still open or undecided. The "What's still load-bearing-open" block enumerates the gaps with file + section pointers.
+- **`substantially-complete`**: All load-bearing items at this threshold are decided, but rough edges remain — wording inconsistencies, a `progress.md` ↔ per-sprint Progress mismatch, a Decisions log missing a recent decision's tag, marketing language to purge, an Out-of-scope entry without a forward-link. The plan *could* graduate at this threshold; the user may want to clean up first. The "Top nits" block enumerates them.
+- **`complete`**: Load-bearing items at this threshold are decided *and* the affected files are internally clean. Recommend the next move — usually locking the next sprint, running `trellis-impl-review` for an external check, or handing the plan off to an implementer if `plan-complete`.
+
+Calibration:
+
+- **Always name the threshold.** A round that locks Sprint 03 doesn't grade against `plan-complete` — it grades against `sprint-03-execution-ready`. Listing "Sprint 04–11 are still stubs" as "load-bearing-open" against a Sprint 03 round is noise; that's the next round's work.
+- **Don't oscillate.** If round N said `substantially-complete` at the same threshold and round N+1 only changed a comment, the verdict shouldn't drop back to `not-yet-complete`.
+- **Cross-sprint coherence is load-bearing at every threshold above scaffold-complete.** A Prerequisite that names a Deliverable spelled differently in a prior sprint is a load-bearing-open item, not a nit.
+- **Don't pad either side.** A 3-bullet "load-bearing-open" list is a real list. A 12-bullet "top nits" list is a sign the plan is not actually substantially-complete — promote the most material items into "load-bearing-open" and re-grade.
+- **Cite the file + section.** Every bullet names the file *and* the section so the user can navigate (`Sprint 04 § Locked Decisions`, `overview.md § Dependency graph`, `progress.md § Sprint 06`). Bare-section references are too ambiguous in a directory of files.
+- **One block per round.** Don't emit multiple completeness assessments in the same round; the user reads the latest as authoritative.
+
+This assessment is the agent's recommendation, not a gate. The user decides when to graduate. But the assessment forces the agent to take a position each round, which surfaces drift before it compounds across sprint files.
+
+---
+
 ## How to use the plan to execute
 
 A sprint is "execution-ready" when a junior engineer can:
@@ -686,6 +915,7 @@ A sprint is "execution-ready" when a junior engineer can:
 4. After each step, mark its checkbox `[x]` in **both** the per-sprint Progress section **and** the master `progress.md`. (Or just the master if the per-sprint section has been removed for compactness — but typically both.)
 5. Record any Deviations applied during implementation **in the same PR** that ships the divergence — top-of-doc list for cross-cutting deltas, inline `### Step N deviations` subsection for granular ones.
 6. After the last step, walk the Acceptance checklist; only when every box is `[x]` is the sprint shippable.
+7. In the same PR that checks off the final step, distill the sprint's Post Mortem section into a sprint-keyed entry in the directory's `post-mortem.md` (creating the file if it doesn't yet exist). If there's nothing post-mortem-worthy, the entry is a single `_No post-mortem-worthy observations._` bullet — don't omit the sprint heading.
 
 If the engineer hits a question the sprint doc doesn't answer:
 
@@ -805,8 +1035,8 @@ The slices are not equal in size. They are equal in shippability.
 
 ## Status
 
-- **Round 1**: scaffolding + sprint roster + open questions enumerated.
-- **Round 2**: …
+- **Round 1**: scaffolding + sprint roster + open questions enumerated. _Next:_ <one-line recommended focus, citing Open question IDs + tags + scope where relevant>.
+- **Round 2**: … _Next:_ <…>.
 
 ## What this plan does *not* try to do
 
@@ -892,6 +1122,8 @@ Every sprint follows the same skeleton: Goal → Prerequisites → Deliverables 
 
 **Goal**: <one sentence>
 
+**Build/test boundary**: <omit unless this step may temporarily leave the repo uncompilable / untestable; if needed, explain why unavoidable and which later step restores the gates>
+
 **Actions**:
 
 1. <concrete action with file paths and code samples>
@@ -943,6 +1175,26 @@ Every sprint follows the same skeleton: Goal → Prerequisites → Deliverables 
 - …
 ```
 
+### `post-mortem.md`
+
+Created lazily — the first sprint to ship creates this file in the same PR that checks off its final step. Each subsequent shipped sprint appends a new section.
+
+```markdown
+# <Feature> — Post Mortems
+
+> Part of the [<Feature> Implementation Plan](./overview.md).
+
+## Sprint 01 — <title>
+
+- <distilled observation, lesson, or follow-up>
+- <distilled observation, lesson, or follow-up>
+- …
+
+## Sprint 02 — <title>
+
+- _No post-mortem-worthy observations._
+```
+
 ---
 
 ## Quick reference: when in doubt
@@ -953,6 +1205,7 @@ Every sprint follows the same skeleton: Goal → Prerequisites → Deliverables 
 - **Tag every Decisions-log bullet with `(R<n>)`** so the audit trail is intact.
 - **Update Status every round**, even if the round was small.
 - **Update `progress.md` whenever step structure changes** — a re-sliced sprint regenerates the master checklist in the same round.
+- **Distill the sprint's Post Mortem into `post-mortem.md`** in the same PR that checks off the sprint's final step — creating the file if it doesn't yet exist. An empty entry (`_No post-mortem-worthy observations._`) is fine; a missing entry is not.
 - **Purge stale wording** when a round supersedes it; trust the Decisions/Status logs to carry the audit trail.
 - **Prefer concrete over abstract**: an example JSON, an actual SQL fragment, a typed interface sketch — over prose paraphrase.
 - **Surface alternatives, don't decide unilaterally** when the user has skin in the game.

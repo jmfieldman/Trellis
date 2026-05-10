@@ -1,6 +1,7 @@
 ---
 name: trellis-design-review
-description: Review on a Design Plan [$0=path-to-plan-file] [$1=review-output-file]
+description: Review a Design Plan
+argument-hint: <path-to-plan-file> <review-output-file>
 disable-model-invocation: true
 ---
 
@@ -24,7 +25,7 @@ The path to save your review is provided as an argument. If not path is provided
 
 Before producing any review output, read these in order:
 
-1. **The design-plan authoring guide** at `.claude/skills/trellis-design-create/design-plan.md`. This is your rubric — the doc you are reviewing was meant to be produced under this guide. Internalize:
+1. **The design-plan authoring guide** at [`../trellis-design-create/design-plan.md`](../trellis-design-create/design-plan.md). This is your rubric — the doc you are reviewing was meant to be produced under this guide. Internalize:
    - The required and conditional document sections.
    - The rules for foundational decisions, "Why X" rationale, decisions log, open questions, status log.
    - The supersession discipline (purge stale wording; tag decisions by round).
@@ -96,7 +97,7 @@ This is the highest-leverage category. The plan author has been close to the des
 ### 5. Authoring-guide / process compliance
 
 - **Decisions log discipline.** Every entry tagged with `(R<n>)`? Each leads with a bold phrase naming the call? Resolved questions actually moved here from Open Questions?
-- **Open questions hygiene.** Anything marked "(resolved)" in place instead of moved to Decisions log? Each entry has an indicative direction or an explicit "deferred until X"?
+- **Open questions hygiene.** Anything marked "(resolved)" in place instead of moved to Decisions log? Each entry has an indicative direction or an explicit "deferred until X"? **Each entry carries exactly one severity tag** (`[blocks-v1]`, `[blocks-impl]`, `[deferred]`, `[exploratory]`) — flag any untagged entries. **Tags match content** — a `[deferred]` tag on a question whose body says "this blocks the schema sketch" is a mismatch (should be `[blocks-v1]`); a `[blocks-v1]` tag on a question whose body says "we'll figure this out post-launch" is a mismatch (should be `[deferred]`). `[blocks-v1]` and `[blocks-impl]` entries name a specific blockee in the entry body. `[deferred]` entries carry a punt rationale.
 - **Status / Rounds log.** Updated for the most recent round? Supersessions called out explicitly (`R7 supersedes R5's contiguity-cache rule`)?
 - **Title & framing block.** "Living planning artifact" + "not a build spec yet" if applicable? Canonical-term clarification if the domain has terminology drift?
 - **Cross-references list.** Annotated with what each link contributes, or a bare list?
@@ -224,4 +225,14 @@ A good review is shorter than a bad one. If you find yourself writing a fifth ni
 
 ## Additional Instructions
 
-This skill may have been invoked with additional instructions. Those instructions should take precedence if they conflict with any instruction in this document.
+Before executing this skill, read and apply Trellis instructions from these sources, in ascending order of precedence:
+
+1. `~/.trellis/instructions.md`
+2. `<repo-root>/.trellis/instructions.md`
+3. Additional instructions included with this skill invocation
+
+`<repo-root>` is the root of the current Git repository. Missing instruction files are normal; skip them silently.
+
+If instructions conflict, later sources override earlier sources. Invocation-specific instructions apply only to the current run and have the highest precedence.
+
+These instructions may override this skill document, but they must not override system, developer, tool, safety, or repository policy instructions.

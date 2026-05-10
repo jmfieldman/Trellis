@@ -42,6 +42,7 @@ A round generally goes:
 5. **Purge obsolete prose.** When a decision invalidates earlier wording, delete the old wording — don't leave both versions side-by-side.
 6. **Append a Status entry** for the round summarizing what changed.
 7. **Ensure internal consistency**. Rewriting sections based on decisions may lead to inconsistencies with other areas of the document. If it is unclear how to resolve, add the new inconsistencies to the open questions section.
+8. **Emit a completeness assessment to chat** at the end of the round (see § "Round-end completeness assessment"). This is the agent's recommendation on whether the plan is ready to graduate to an implementation plan, what's still load-bearing-open, and which nits the user may want to resolve before declaring the plan done.
 
 ### Round 1 — scaffolding
 
@@ -53,7 +54,7 @@ The first round produces the skeleton, not the design:
 - Cross-references to adjacent plans/wiki.
 - A first cut at **Foundational decisions** (or Purpose / Scope) — the load-bearing assumptions.
 - **Scope and non-goals** — what's in, what's out (be aggressive about what's out).
-- An initial **Open questions** list of everything not yet resolved.
+- An initial **Open questions** list of everything not yet resolved, **each tagged at creation** with `[blocks-v1]`, `[blocks-impl]`, `[deferred]`, or `[exploratory]` per § "Open questions" → "Severity tag taxonomy." Round 1 lists are usually heavy on `[blocks-v1]` and `[blocks-impl]`; few or no `[deferred]` or `[exploratory]` is normal at this stage.
 - A `Round 1` entry in Status saying "foundational decisions captured + open questions enumerated."
 
 Schema, API surface, lifecycle, worker logic, GC — these mostly come in later rounds. Don't pre-populate them with assumptions; surface the unresolved shape as questions.
@@ -213,12 +214,29 @@ If the design has a visible product surface, sketch it: layout, filters, group-b
 ### 12. Open questions
 
 A numbered list of items not yet decided. Each entry includes:
+- A **severity tag** in square brackets (see taxonomy below) — placed immediately after the bold title so it surfaces in any skim.
 - The question, briefly.
 - Why it's open / what makes it hard.
 - An indicative resolution direction or an explicit "deferred until X."
-- Whether it blocks anything currently in scope.
+- Whether it blocks anything currently in scope (named explicitly when the tag is `[blocks-v1]` or `[blocks-impl]` — e.g., "blocks the schema sketch in §6," "blocks impl-plan Sprint 01").
 
-When a round resolves an entry, the entry **moves to** the Decisions log; it does not stay in Open questions with a "(resolved)" tag.
+#### Severity tag taxonomy
+
+Every Open question carries exactly one tag. Pick the most blocking one if multiple apply:
+
+- **`[blocks-v1]`** — must be resolved before v1 ships. The design has a hole this question fills; without an answer, the system can't be built or can't be built correctly. Includes most foundational shape questions, schema decisions the lifecycle depends on, contract clauses with peer services, and access-control predicates.
+- **`[blocks-impl]`** — must be resolved before an implementation plan can start (or before a specific sprint can be locked, if an impl plan exists). Less load-bearing than `[blocks-v1]` — the design *concept* survives without it, but the impl-plan author can't sequence sprints or lock decisions without the answer. Includes most "how do we sequence the rollout" questions and "which surface lands first" questions.
+- **`[deferred]`** — explicitly punted to a later round / phase / version. The design *could* answer it now but is deliberately not. The entry includes the punt rationale ("deferred until X concrete demand emerges," "deferred to v2 — schema-additive when we want it," "deferred until <peer team> confirms <thing>"). Does not block v1 ship.
+- **`[exploratory]`** — surfaced for context but not yet shaped into a question that needs an answer. The doc records the open thread so a future round can pick it up; the current design does not depend on it. Lowest-priority bucket. Should be the smallest portion of any Open questions list.
+
+The tag is the user's triage handle. A 30-item list with proper tags can be scanned in 30 seconds; the same list without tags requires reading every entry. When the user asks "what blocks impl?" the answer is `grep -c '\[blocks-impl\]'`.
+
+#### Round mechanics for tags
+
+- **Tag at creation.** Every new Open question gets a tag the moment it's filed. Untagged entries are a process bug.
+- **Promote when shape clarifies.** An `[exploratory]` question that crystallizes into a real shape question gets promoted to `[blocks-impl]` or `[blocks-v1]` in the round that crystallizes it. Note the promotion in the Status entry.
+- **Demote when scope shrinks.** A `[blocks-v1]` question that the round downgrades to "we can ship without this" becomes `[deferred]` with a punt rationale. Note the demotion in the Status entry.
+- **Resolution is bucket-agnostic.** When a round resolves an entry — at any tag — the entry **moves to** the Decisions log; it does not stay in Open questions with a "(resolved)" tag.
 
 ### 13. Deferred (out of scope for this plan)
 
@@ -238,15 +256,20 @@ Each bullet leads with a bold phrase that names the call. The list lets a return
 
 ### 15. Status / Rounds
 
-A flat numbered list — one entry per planning round — capturing what changed:
+A flat numbered list — one entry per planning round — capturing what changed *and* what to focus on next:
 
 ```
-- **Round 1**: foundational decisions captured + schema sketch + open questions enumerated.
-- **Round 2**: naming → `conversation`; REST verbs split per resource type; …
-- **Round 9**: introduced `preempted_by` denormalization on `chat.messages` …
+- **Round 1**: foundational decisions captured + schema sketch + open questions enumerated. _Next:_ resolve the privacy predicate for participant invites (Q3 [blocks-v1]).
+- **Round 2**: naming → `conversation`; REST verbs split per resource type; … _Next:_ lock the sync cursor shape (Q7 [blocks-impl]).
+- **Round 9**: introduced `preempted_by` denormalization on `chat.messages` … _Next:_ graduate to implementation plan.
 ```
 
-The Rounds log is the doc's git log. Scan it to recover narrative context: "why does the doc say X" → "round 5 supersedes round 3 because Y."
+Each entry has two clauses:
+
+1. **What changed.** A summary of what this round resolved or superseded. Cite supersessions explicitly (`R7 supersedes R5's contiguity-cache rule`).
+2. **`_Next:_` clause** — a one-line italic tail naming the recommended next-round focus, citing the Open question(s) by ID + tag. This persists the agent's between-rounds recommendation into the doc itself, so a user picking the doc up a week later via `trellis-design-iterate` doesn't lose the chat-only handoff context. When the plan is complete, the `_Next:_` clause is `graduate to implementation plan` (or `run trellis-design-review for an external check first`).
+
+The Rounds log is the doc's git log. Scan it to recover narrative context: "why does the doc say X" → "round 5 supersedes round 3 because Y." Read the latest `_Next:_` clause to recover the agent's prior recommendation for what to work on now.
 
 ### 16. See also
 
@@ -367,6 +390,68 @@ abstract bulkLookupByPhone: (
 
 ---
 
+## Round-end completeness assessment
+
+After every round (including Round 1), the agent emits a completeness assessment to chat. This is **not** part of the doc body — it's a chat-only recommendation that helps the user decide whether to keep iterating, run an external review, or graduate to an implementation plan.
+
+The assessment is the agent's honest read on the plan's state. It is allowed to be opinionated; the user is allowed to disagree. Do not pad the "complete" verdict to be polite, and do not list every minor wording quirk to look thorough.
+
+### When a design plan is "complete"
+
+A design plan is complete enough to graduate to an implementation plan when **all** of the following hold:
+
+- **Foundational decisions are locked.** The numbered list (or Purpose/Scope prose) has no `TBD`, no "leaning toward X," no "we'll figure this out." Each foundational decision has a rationale paragraph.
+- **Scope and Non-Goals are explicit.** Both the in-scope and out-of-scope-for-v1 lists are populated. No silent "well, we'd probably also do…" assumptions in the body.
+- **Schema / data model is sketched** (when applicable). Per-table column tables, indexes, constraints, polymorphic-parent rules, and the "Why X" subsections for non-obvious shape decisions are all present. Open questions about column types / nullability are resolved or explicitly deferred.
+- **Lifecycle / operational sections cover the load-bearing flows.** Creation, mutation, soft-delete, sync, GC, idempotency — for the flows the system actually uses, the design is committed. Failure modes (peer down, replay, race, partial commit) have an answer or are filed as deferred with rationale.
+- **API surface is sketched** (when applicable). Endpoint table is present; field-level shapes are sketched in Zod / type-alias form; access scopes (`internal_function` vs. `public_api`) are tagged.
+- **Cross-service contracts are defined** (when applicable). Required peer helpers are named with their `accessScope`. Read-before-BEGIN / write-after-COMMIT discipline (or the project's equivalent) is stated.
+- **Privacy / authorization** (when applicable) — the access predicate for each scope is stated; cross-tenant leakage is addressed.
+- **Open questions list contains zero `[blocks-v1]` and zero `[blocks-impl]` entries** — only `[deferred]` and `[exploratory]` tags remain. Each `[deferred]` item carries a punt rationale; `[exploratory]` items are explicitly noted as "surfaced for context, not load-bearing." This is the literal grep-able test for design-plan completeness.
+- **Decisions log and Status log are coherent** — every body decision has a tagged log entry; Status entries narrate the round-by-round trajectory honestly; supersessions are called out.
+- **Tone and conventions are clean** — no marketing words, no build-spec specifics, identifiers in backticks, dates absolute.
+
+If any of these is not true, the plan is **not yet complete**.
+
+### What to emit after each round
+
+The chat output uses this exact structure (one block, terse, no preamble):
+
+```markdown
+### Round <N> — completeness assessment
+
+**Verdict**: <not-yet-complete | substantially-complete | complete>
+**Open-question tag counts**: `<a> blocks-v1 / <b> blocks-impl / <c> deferred / <d> exploratory`
+
+**What's still load-bearing-open** *(if not complete; omit otherwise)*:
+- <one-line item naming the section / question + tag + why it's load-bearing>
+- …
+
+**Top nits worth resolving before declaring done** *(if substantially-complete or complete; omit otherwise)*:
+- <one-line item naming a section + the wording / consistency / coverage issue>
+- …
+
+**Recommended next-round focus**:
+- <one-line recommendation; usually the highest-priority blocks-v1 / blocks-impl items, or "graduate to implementation plan" if complete>
+```
+
+Verdict semantics:
+
+- **`not-yet-complete`**: At least one load-bearing item from the "complete" list above is still open or undecided. The plan should not graduate to impl yet. The "What's still load-bearing-open" block enumerates the gaps.
+- **`substantially-complete`**: All load-bearing items are decided, but the plan still has rough edges — wording inconsistencies, an Open Questions list with stale entries, a Decisions log missing a recent decision's tag, marketing language to purge. The plan *could* graduate, but the user may want to clean up first. The "Top nits" block enumerates them.
+- **`complete`**: Load-bearing decisions are made *and* the doc is internally clean. Recommend graduating to an implementation plan (or running `trellis-design-review` for an external check first, if the user wants one).
+
+Calibration:
+
+- **Don't oscillate.** If round N said `substantially-complete` and round N+1 only changed a comment, the verdict shouldn't drop back to `not-yet-complete`. Verdicts are about plan state, not round size.
+- **Don't pad either side.** A 3-bullet "load-bearing-open" list is a real list. A 12-bullet "top nits" list is a sign the plan is not actually substantially-complete — promote the most material items into "load-bearing-open" and re-grade.
+- **Cite the section.** Every bullet names the affected section ("Schema § `chat.messages`", "Open questions Q4") so the user can navigate without re-reading the doc.
+- **One block per round.** Don't emit multiple completeness assessments in the same round; the user reads the latest as authoritative.
+
+This assessment is the agent's recommendation, not a gate. The user decides when to graduate. But the assessment forces the agent to take a position each round, which surfaces drift before it compounds.
+
+---
+
 ## Skeleton template
 
 Drop sections that don't apply. Add domain-specific sections where the design needs them.
@@ -464,8 +549,11 @@ required. Read-before-BEGIN / write-after-COMMIT discipline. Failure modes.>
 
 ## Open questions
 
-1. **<Title>.** <Question + state of debate + indicative direction or
+1. **<Title>.** `[blocks-v1 | blocks-impl | deferred | exploratory]`
+   <Question + state of debate + indicative direction or
    explicit "deferred until X.">
+   Blocks: <named blockee — required for blocks-v1 / blocks-impl;
+   omit for deferred / exploratory>.
 2. ...
 
 ---
@@ -500,8 +588,8 @@ Explicitly not a sprint plan — call that out in the heading.>
 
 ## Status
 
-- **Round 1**: <summary>.
-- **Round 2**: <summary>.
+- **Round 1**: <summary>. _Next:_ <one-line recommended focus for next round, citing Open question IDs + tags>.
+- **Round 2**: <summary>. _Next:_ <…>.
 - ...
 
 ---
