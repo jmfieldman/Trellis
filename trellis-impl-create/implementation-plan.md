@@ -472,6 +472,23 @@ Every Locked Decisions table should resolve answers to the recurring questions f
 - **What's deferred?** Hardening, quotas, observability, polish — usually punted to a later sprint.
 - **What does idempotency / retry-safety look like?** Whenever the surface includes mutations a client may retry.
 
+#### Scope-guardrail rows: `Avoid in this sprint` vs `Banned in this sprint`
+
+A common Locked Decisions row names files / directories / patterns this sprint should not touch. Use two distinct labels — they tell the executor how rigidly to read the rule:
+
+- **`Avoid in this sprint`** — soft scope guardrail. The sprint's intended work does not edit these surfaces, but minor mechanical changes required to keep the code compiling (a renamed argument that must thread through a call site, an enum case that must be matched, a removed identifier that has to be replaced at the reference) are permitted. The executor records the change as a Deviation and continues.
+
+- **`Banned in this sprint`** — hard scope guardrail. The sprint's design depends on these surfaces staying as they are: a deferred type or field that must not be pre-staged, a schema version that must not bump, a security / authorization layer that must not relax, an explicitly out-of-scope module. Even here, minor mechanical propagation is allowed (and recorded as a Deviation), but anything beyond mechanical — logic edits, new behavior, a different parameter shape, a new field — means the plan is wrong; the executor stops and the user routes to `trellis-impl-iterate`.
+
+Default to `Avoid` for scope shaping. Reserve `Banned` for the few entries that name a real design / security / planning guardrail. If every entry in the row would be `Avoid`, fold them into "Out of scope" instead — the guardrail row earns its place only when a future executor might plausibly think they should touch the surface and needs a posture cue.
+
+```
+| Decision                                | Value                                                                                                                                                            |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Avoid in this sprint                    | (a) Legacy view files under `src/views/legacy/*`. Identifiers may need a renamed-argument propagation; do no more. (b) Documentation that describes the surface. |
+| Banned in this sprint                   | (a) Bumping `schemaVersion` — Sprint NN owns the migration. (b) Pre-staging the deferred `usageMetrics` field, even unused. (c) Relaxing the auth predicate.     |
+```
+
 ### 8. Architecture notes
 
 Short paragraphs justifying non-obvious shape decisions. The sprint analog of the design plan's "Why X" subsections. Almost every sprint earns at least one. Examples:

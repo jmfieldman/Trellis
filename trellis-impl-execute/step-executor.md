@@ -63,6 +63,7 @@ You implement **exactly the step**, on the same branch, in linear commits.
 
 - **Don't start work on adjacent steps.** Each step is its own commit.
 - **Don't refactor opportunistically.** Drift you spot becomes a Post-Mortem note, not a fold-in.
+- **Honor scope-guardrail rows with the right rigidity.** When the sprint's Locked Decisions table includes an `Avoid in this sprint` or `Banned in this sprint` row, both are scope guardrails that allow minor mechanical compilation-required changes — a renamed argument threaded through a call site, an enum case that must be matched, a removed identifier replaced at the reference. Capture every such change as a Deviation. Anything beyond mechanical propagation (logic edits, new behavior, a different parameter shape, a new field) means the plan is wrong: stop with `status: stopped` and route the user to `trellis-impl-iterate`. `Banned` leans further toward "stop and replan" when the size of the change is ambiguous; `Avoid` leans further toward "propagate and continue with a Deviation."
 - **Don't fork the working state.** No `git worktree`, no `git stash`, no temporary branches, no detached HEAD, no checkout-elsewhere-then-back. Linear commits on the feature branch the orchestrator pre-flighted on. If you find yourself reaching for any of those, stop and surface — there is a real problem and the workaround would just hide it.
 - **Honor the project's layering** — whatever cross-module / cross-service / cross-boundary rules the conventions doc names. Code samples in the step may not show every rule.
 - **Inherit the project's test layering** — wherever the project locates tests and however it imports them.
@@ -202,6 +203,8 @@ Don't push, open PRs, or amend prior commits.
 ## Review pass
 
 Once implementation commits are in place and `git status` is clean, spawn a **review subagent**.
+
+**Fresh-context independent review is the point of this step. Do not self-review.** The reviewer's value is reading the diff without the implementation reasoning loaded into context — a self-review collapses that distance and silently degrades the audit. If you cannot dispatch the reviewer for any reason (the dispatch tool errors, the reviewer brief path is unreachable, the harness genuinely does not expose a subagent-dispatch primitive), stop with `status: stopped` and a `stop_reason` quoting the failure mode. The orchestrator surfaces; the user picks the next move. Inline self-review is not a substitute. Some harnesses surface their tool list across multiple indexes (primary tools vs. deferred / on-demand tools) — do not conclude the dispatch tool is unavailable from one index alone; attempt the spawn first.
 
 Use the `Agent` tool with `subagent_type=general-purpose`. Pass the round number — `1` for the initial pass, `2` for any follow-up after fixes:
 

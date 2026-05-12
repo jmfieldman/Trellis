@@ -90,7 +90,7 @@ The contract the diff must honor.
 - **Every Action accounted for?** Walk the Actions list — is there evidence in the diff that each was performed? Note silently-skipped actions.
 - **Every Deliverable present?** Each item in Deliverables maps to a file or change.
 - **Subtle-bug callouts respected?** Each `**Subtle bug:**` in Actions describes a known gotcha — flag any that look mishandled.
-- **Out-of-scope respected?** Anything in the diff that creeps beyond the step's Goal or the sprint's Out of scope list.
+- **Out-of-scope respected?** Anything in the diff that creeps beyond the step's Goal or the sprint's Out of scope list. When a Locked Decisions row marks files / directories as `Avoid in this sprint` or `Banned in this sprint`, a minor mechanical change required for compilation (a renamed argument threaded through, an enum case that must be matched, a removed identifier replaced) is permitted if the executor captured it as a Deviation — flag only when the change went beyond mechanical (logic edits, new behavior, a different parameter shape) or wasn't captured.
 - **Sprint Locked Decisions honored?** Each row in the Key design decisions table this step touches — does the diff respect it (right error code, right idempotency strategy, right path / endpoint shape, etc.)?
 - **Cross-step contracts.** If the step ships a helper a later step consumes, does the helper's signature match what the later step expects?
 - **Captured deviations are honest.** When the implementation diverged from literal Actions, the executor should have logged a Deviation. If a divergence is undeclared **and** doesn't satisfy the Goal, flag it.
