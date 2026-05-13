@@ -204,7 +204,13 @@ Don't push, open PRs, or amend prior commits.
 
 Once implementation commits are in place and `git status` is clean, spawn a **review subagent**.
 
-**Fresh-context independent review is the point of this step. Do not self-review.** The reviewer's value is reading the diff without the implementation reasoning loaded into context — a self-review collapses that distance and silently degrades the audit. If you cannot dispatch the reviewer for any reason (the dispatch tool errors, the reviewer brief path is unreachable, the harness genuinely does not expose a subagent-dispatch primitive), stop with `status: stopped` and a `stop_reason` quoting the failure mode. The orchestrator surfaces; the user picks the next move. Inline self-review is not a substitute. Some harnesses surface their tool list across multiple indexes (primary tools vs. deferred / on-demand tools) — do not conclude the dispatch tool is unavailable from one index alone; attempt the spawn first.
+**Fresh-context independent review is the point of this step. Do not self-review.** The reviewer's value is reading the diff without the implementation reasoning loaded into context — a self-review collapses that distance and silently degrades the audit. Inline self-review is not a substitute.
+
+Try to dispatch the reviewer yourself first — it keeps the orchestrator's context light. Some harnesses surface their tool list across multiple indexes (primary tools vs. deferred / on-demand tools) — do not conclude the dispatch tool is unavailable from one index alone; attempt the spawn first, and if a discovery mechanism exists (e.g., a tool-search primitive), use it.
+
+If the dispatch primitive **errors when invoked**, the reviewer brief path is unreachable, or any other concrete blocker arises mid-spawn, stop with `status: stopped` and a `stop_reason` quoting the failure mode. The orchestrator surfaces; the user picks the next move.
+
+However, if your harness simply does **not** expose nested-subagent dispatch at all (verified by attempting the dispatch and inspecting whatever discovery mechanism exists — not assumed from one index), do **not** stop. Instead follow the "Orchestrator-dispatched review fallback" section below. The orchestrator can dispatch the reviewer on your behalf; the audit property (fresh-context reader) is preserved either way.
 
 Use the `Agent` tool with `subagent_type=general-purpose`. Pass the round number — `1` for the initial pass, `2` for any follow-up after fixes:
 
@@ -288,9 +294,27 @@ After fixes, re-review only when changes are non-trivial:
 
 Cap iterations at **two review rounds total** (initial + one follow-up). If round 2 still surfaces blocking concerns, stop and surface — at that point a human decides whether the step needs a planning revisit.
 
+### Orchestrator-dispatched review fallback
+
+Use this path only when you confirmed your harness does not expose nested-subagent dispatch at all (see "Review pass" above for the discovery rules). The audit property — fresh-context reader of the diff — is preserved because the orchestrator dispatches the reviewer from a context that has not seen your implementation reasoning.
+
+Your responsibilities under this fallback:
+
+- **Implement, verify, and commit** as usual. Your implementation commit(s) must leave the working tree clean.
+- **Create the execution-record file** at the path the orchestrator gave you, populated through the Verification section (everything you would have written before spawning the reviewer). Leave a placeholder where the `## Review` section will go — the orchestrator-dispatched reviewer appends there.
+- **Do NOT update the Progress checkboxes** in either the sprint file or `progress.md`. In this fallback the orchestrator owns Progress finalization (after it dispatches the reviewer, triages findings, and routes any in-step fixes back to you).
+- **Do NOT update Deviations or Post Mortem** sections in the sprint file yet — those land alongside Progress in the orchestrator's finalization commit. If you applied a deviation during implementation, note it in the execution record so the orchestrator (or a round-2 you) can reconcile.
+- **Return your YAML hand-back** with `status: done`, `review_verdict: not_run`, `review_rounds: 0`, and `review_files` listing the execution-record path. The orchestrator interprets `not_run` as "executor handed off cleanly — I'll dispatch the reviewer."
+
+If the orchestrator then re-dispatches you with reviewer findings (round-1 results passed in as additional context), apply the in-step fixes per the Triage rules above, append a "Fixes applied — round 1" section to the execution record, commit, and return YAML with `review_verdict: in_step_fixes`, `review_rounds: 1`. The orchestrator handles dispatching round 2 (if non-trivial) and the final Progress / Deviations / Post Mortem commit.
+
+This fallback exists so the audit pattern survives harnesses that don't allow nested dispatch. It does not relax any other invariant — clean working tree, real commits, durable execution record, no self-review.
+
 ---
 
 ## Updating the sprint document
+
+This section applies when you ran the review yourself (the default path). If you handed the reviewer off to the orchestrator per the "Orchestrator-dispatched review fallback" section, the orchestrator owns these surfaces — do **not** edit Progress, Deviations, or Post Mortem in your hand-back. You may (and should) populate the execution record's Verification section in your impl commit; the rest lands later.
 
 After implementation, review, and any follow-up commits are in place, edit four surfaces — typically in one final commit so the docs land alongside the code. (Mid-step edits to these surfaces are also fine; this is the last call where you reconcile and commit.)
 
@@ -388,7 +412,7 @@ Field semantics:
 - `status: stopped` is for any controlled halt: load-bearing plan-wrongness, authorization gate, hook persistently failing, round-2 review still material, reviewer-blocked. Always populate `stop_reason`.
 - `commits` lists every SHA you produced for this step in order. Empty list when `status: stopped` before the first commit.
 - `verification_status: failed` means a Verification check failed and you couldn't make it pass — this should pair with `status: stopped`.
-- `review_verdict: not_run` is for `status: stopped` cases where you halted before invoking the reviewer.
+- `review_verdict: not_run` has two valid uses: (a) paired with `status: stopped` when you halted before invoking the reviewer, or (b) paired with `status: done` when you used the "Orchestrator-dispatched review fallback" path — clean commits in place, execution record populated through Verification, Progress intentionally left untouched, reviewer to be dispatched by the orchestrator.
 - `review_files` lists every execution-record file you wrote to (typically just one). The orchestrator will verify each is committed.
 
 The detail behind every field lives in the commits, the sprint file, and the execution-record file. The YAML is the parseable handshake.

@@ -226,15 +226,31 @@ When the subagent returns:
 
 1. **Parse the YAML summary block.** If the response is missing the block or is malformed, stop and report — the subagent violated its summary contract.
 2. **If `status: stopped`**, surface the `stop_reason` to the user and stop the loop. Do not auto-retry. The subagent halted intentionally; the user picks the next move (re-invoke, manually fix, plan-round, etc.).
-3. **If `status: done`, run all of these objective checks** — every one must pass or the loop stops:
+3. **If `status: done` and `review_verdict` is one of `clean | in_step_fixes | material_rework`** (the executor ran the review itself), run all of these objective checks — every one must pass or the loop stops:
    - `git status --porcelain=v1` is empty. If the subagent left uncommitted changes, stop and report — the subagent violated its commit contract.
    - `git log --oneline -5` shows at least one new commit since the pre-step state. If not, stop and report — the subagent did not actually commit. The commit list should match the `commits:` field in the YAML summary.
    - The sprint file's `## Progress` section now shows Step `N` as `[x]`. The parent `progress.md` matches. If either is unchecked or they disagree, stop and report — the subagent skipped its progress-update obligation.
    - Each path in `review_files:` exists and is committed (a `git ls-files <path>` returns a hit). If a referenced execution-record file is missing or untracked, stop and report.
+4. **If `status: done` and `review_verdict: not_run`**, the executor used the orchestrator-dispatched review fallback (its harness does not expose nested-subagent dispatch — see the executor brief). Follow the fallback flow below instead of the default validation: implementation is committed, but the reviewer pass and Progress finalization are now your responsibility.
 
-If every check passes, proceed to the next step.
+If every check in the default validation path passes, proceed to the next step.
 
 If any check fails, do **not** auto-retry. Report what you found and let the user decide whether to re-invoke, manually fix, or roll back.
+
+### 3a. Orchestrator-dispatched review fallback
+
+Enter this path only when the executor returned `status: done` with `review_verdict: not_run`. The audit property — fresh-context reader of the diff — is preserved because **you** are dispatching the reviewer from a context that has not seen the executor's implementation reasoning. You may want to keep this loop tight; some intermediate validation differs from the default path:
+
+1. **Pre-review state check.** `git status --porcelain=v1` is empty; the commits in the YAML hand-back exist; the execution-record file at the path in `review_files:` exists and is committed (verified via `git ls-files`); the sprint file's Progress and `progress.md` are **still unchecked** for Step `N` (the executor was told to leave them alone in this path). If any of those is wrong, stop and report — the executor violated the fallback contract.
+2. **Dispatch the reviewer yourself**, using the reviewer brief at `<absolute-path-to-skill-dir>/step-reviewer.md` and the same per-step parameters you computed for the executor (sprint file, step number, step title, execution-record path, feature branch, commit range from the executor's `commits:` list, round number = 1, is-final-in-range flag). Tell the reviewer it was dispatched by the orchestrator rather than the executor (treatment is otherwise identical). Do not run the reviewer in the background — its result gates the next move.
+3. **Parse the reviewer's verdict** (returned as a brief acknowledgment in chat; the substantive review lives in the appended execution-record section). Then:
+   - **`clean`** — commit the execution-record append along with the Progress / Deviations / Post Mortem updates the executor would have committed in the default path. One commit is fine (`<feature-area>: sprint <NN> step <N> — review clean, mark Progress`). The commit goes through the project's pre-commit hook normally.
+   - **`in_step_fixes`** — re-dispatch the executor with the round-1 findings as additional context (paste the appended review section verbatim into a "Round-1 reviewer findings" block in the new spawn prompt). The re-dispatched executor applies fixes, commits, and returns YAML with `review_verdict: in_step_fixes`, `review_rounds: 1`. Then dispatch a round-2 reviewer (if the fixes are non-trivial per the executor brief's re-review criteria) or accept the round-1 findings closed and finalize as in the `clean` path.
+   - **`material_rework`** — re-dispatch the executor with the round-1 findings; after fixes, always dispatch round 2. If round-2 verdict is still `material_rework`, stop and surface — at that point the step needs a planning revisit.
+   - **`reviewer_blocked`** — stop and surface. Do not invent a fix.
+4. **After Progress is finalized** (either in your `clean`-path commit or after the round-2 finalization commit), run the standard step-3 validation: working tree clean, Progress checked in both files, commits exist, review files committed. Then proceed to the next step.
+
+This fallback exists so the audit pattern survives harnesses that don't allow nested dispatch. It does not relax any invariant other than "who dispatches the reviewer." Clean working tree, real commits, durable execution record, and no self-review still apply.
 
 ### 4. Continue the loop
 
@@ -298,7 +314,7 @@ The orchestrator's job is to fail loudly when invariants break. Do **not** auto-
 
 - A subagent returning while the working tree is dirty.
 - A subagent returning with no new commit.
-- A subagent that completes implementation but leaves Progress unchecked.
+- A subagent that completes implementation but leaves Progress unchecked — **except** when the executor returned `review_verdict: not_run` (orchestrator-dispatched review fallback), in which case Progress is intentionally deferred to the orchestrator's post-review commit (see § "Orchestrator-dispatched review fallback").
 - `progress.md` and the sprint file's per-sprint Progress drifting after a step.
 - A pre-commit hook that the subagent could not resolve and that left the index in a partial state.
 - Any step in the range failing validation. (Stop the loop; do not skip ahead.)
