@@ -54,7 +54,7 @@ Do not begin writing the review until all six steps are complete.
 
 ## What to look for
 
-Organize your scrutiny around the seven axes below. The first axis — **cross-sprint coherence** — is unique to implementation-plan reviews and is your highest-leverage category. The remaining axes mirror the design-plan reviewer's posture, scoped to per-file or per-sprint scrutiny.
+Organize your scrutiny around the eight axes below. The first axis — **cross-sprint coherence** — is unique to implementation-plan reviews and is your highest-leverage category. The remaining axes mirror the design-plan reviewer's posture, scoped to per-file or per-sprint scrutiny.
 
 For each issue you raise, state (a) **where** it is (which file + section + brief quote or line range), (b) **what** the issue is, (c) **why** it matters, and (d) one or more **suggested directions** — the resolution options you see, which one you recommend, and why. When multiple reasonable resolutions exist, enumerate them *and* name the one you'd pick with your reasoning. You are not resolving the issue by editing the plan — you are handing back a recommendation the author (or the feedback-integration step) can act on or override.
 
@@ -145,6 +145,14 @@ This is the highest-leverage substance category for any single sprint. Look hard
 - **Title & framing block.** `overview.md` links back to the source design plan? Each sprint links back to `overview.md`?
 - **Cross-references list.** Annotated with what each link contributes, or a bare list?
 - **Anti-patterns from the guide.** Walk the explicit list in the authoring guide and flag any present.
+
+### 8. Open questions — scrutinize and recommend
+
+Open questions — both `overview.md`-level and sprint-level — are not just inventory to check for hygiene and ownership (axes 1 and 7 cover that). They are the part of the plan most likely to benefit from a fresh reviewer's judgment, and resolving them is a primary purpose of the review. For every open question — and every decision the plan frames as still-open inside a sprint body:
+
+- **Validate the framing before you trust it.** An open question often ships with a menu of options, a pros/cons table, or a paragraph of discussion. Do not take that framing at face value — audit it. Confirm the presented options are actually distinct, actually viable, and mutually exhaustive enough to decide from. Confirm the stated pros and cons are true. A pro that isn't real, a con that doesn't apply, an option a peer service or the existing codebase already rules out, or a missing option that dominates the ones presented — each invalidates the question as framed and is itself a finding worth raising. Spot-check load-bearing claims in the discussion against the actual code and against the source design plan.
+- **Recommend a direction when one is clear.** If the question has a clear answer, or a clear best choice among the options presented, say so: put the recommended direction and the reasoning into the review. Don't retreat to "the author should decide" when the evidence points one way. This is the same recommend-don't-resolve posture as everywhere else — you state the direction in the review, you don't edit the plan to enact it.
+- **Escalate honestly when it's genuinely a human call.** If the question truly requires a human decision — a product call, a business trade-off, or a judgment where the options are roughly balanced and the deciding context isn't in the plan or the code — say that explicitly and explain *why*, so the downstream feedback-integration step knows the escalation is deliberate rather than a gap in your analysis.
 
 ---
 
@@ -254,6 +262,22 @@ When the suggested-directions block enumerates options, format as:
 ```
 
 This option-style framing is required whenever the resolution is a judgment call. The menu gives the author the alternatives; the recommendation gives the downstream feedback-integration step something it can act on without escalating to a human. Always attach the recommendation — a menu with no pick just relocates the decision instead of advancing it. The one exception is a genuinely balanced call where the options are roughly equal and the right answer needs context you don't have: there, say so explicitly and explain *why* it's balanced (which trade-offs cancel out), so the integration step knows the escalation is deliberate rather than a gap in your analysis.
+
+---
+
+## What to surface in the chat response
+
+The review document at $1 is the durable artifact. But the open-question dispositions must *also* be surfaced directly in your chat response, so the human running the review sees them without opening the file.
+
+After writing the review, end your chat response with an **Open questions** summary — a list with one entry per open question (both `overview.md`-level and sprint-level, plus any decisions a sprint body still frames as open). For each entry:
+
+- **The question** — one line, with its source (overview, or Sprint NN).
+- **Disposition** — one of:
+  - **Recommended direction:** `<the direction you pushed in the review, one line, plus the one-line why>` — when you found a clear answer or a clear best option.
+  - **Reframed:** `<what was wrong with the options / pros / cons as presented>` — when the question's framing was invalid and your finding is about the framing itself.
+  - **Needs human:** `<why this is genuinely a human call>` — when the decision truly requires a person.
+
+This summary is a digest of what is already in the review document, not new content — every recommendation here must also appear in the review body. Its purpose is to give the human a fast read on which questions you moved forward, which you reframed, and which still need them.
 
 ---
 
