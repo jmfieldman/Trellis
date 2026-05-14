@@ -193,7 +193,7 @@ A healthy impl-plan triage is roughly:
 - **0–10% Reviewer-wrong** — a small but non-zero rate is normal, especially on cross-file coherence claims (the highest-error category for reviewer agents). A rate above ~20% is a signal that the review itself should be re-run rather than triaged; surface this to the user.
 - **5–15% Ignore** — duplicate / out-of-scope / over-engineering / authoring-guide-contradicting / stylistic / out-of-directory items.
 
-Combined Incorporate + Minor incorporate is typically 55–80%.
+Combined Incorporate + Minor incorporate is typically 50–85%.
 
 Out-of-band signals:
 

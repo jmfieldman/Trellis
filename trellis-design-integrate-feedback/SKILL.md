@@ -172,7 +172,7 @@ A healthy design-plan triage is roughly:
 - **0–10% Reviewer-wrong** — a small but non-zero rate is normal. A rate above ~20% is a signal that the review itself should be re-run rather than triaged; surface this to the user.
 - **5–15% Ignore** — duplicate / out-of-scope / over-engineering / authoring-guide-contradicting / stylistic items.
 
-Combined Incorporate + Minor incorporate is typically 45–65%.
+Combined Incorporate + Minor incorporate is typically 35–70%.
 
 Out-of-band signals:
 
