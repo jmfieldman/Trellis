@@ -32,7 +32,7 @@ You ARE:
 You are NOT:
 
 - Resolving open questions the plan already had open. Your scope is the review document.
-- Auto-resolving review items that hinge on a judgment call the human should make. Those go to Open questions, not into the body.
+- Auto-resolving review items that hinge on a judgment call *only the human* can make. When the reviewer laid out the options and recommended one with sound reasoning, adopting that recommendation **is** your job — that is the decision the review → integrate-feedback loop exists to make. What you don't do is invent a resolution the reviewer didn't propose, or override a sound recommendation on a whim. Items go to Open questions only when the choice is genuinely more nuanced than the reviewer's framing, or genuinely needs a human operator — see § "The triage rule".
 - Running a new planning round on the underlying domain. If a review item demands fresh design (not just a fix), it belongs in Open questions for the next planning round.
 - Fabricating new content beyond what the review item supports. If a review concern is real but the right answer is not derivable from the plan + review, file it as an Open question rather than guessing.
 - Trusting the review on faith. A wrong incorporation corrupts the plan; a missed-but-correct incorporation will be caught by the next review. Defaulting toward verification is asymmetric in the right direction.
@@ -56,6 +56,8 @@ A wrong incorporation is asymmetrically expensive: it corrupts the plan in a way
 2. **Confirm any cross-reference the reviewer relies on resolves.** If the reviewer says "this contradicts `[[wiki/foo]]`," confirm `[[wiki/foo]]` exists and actually establishes the rule. A `WebFetch` / `Read` is cheap.
 3. **Confirm any project-convention claim against the source.** If the reviewer says "the project bans X," grep `CLAUDE.md` and adjacent project docs for the actual rule. Don't take the reviewer's paraphrase at face value.
 4. **Confirm contradictions actually contradict.** When the reviewer says "§3 says X but §7 says ¬X," read both sections in full — sometimes the conflict dissolves once context is loaded.
+
+When the Incorporate item is an **adopted reviewer recommendation** on a judgment call, verification has a second half: beyond confirming the cited evidence (steps 1–4 above), confirm the reviewer's *reasoning* for the recommendation holds — the trade-off they cite is real, the constraint they lean on actually applies, and you don't see a material consideration they missed. If the evidence checks out but the reasoning doesn't, the item is an **Open question** (the choice is more nuanced than the reviewer's framing), not an Incorporate — and not Reviewer-wrong, since Reviewer-wrong is for failed *factual* claims, not for a recommendation you'd weigh differently.
 
 **Not required** for **Minor incorporate** — typo fixes, marketing-language purges, missing-cross-link adds, numbering repairs, stale-text deletes following an explicit Status-log supersession. These don't hinge on the reviewer's interpretation; the body wins.
 
@@ -84,12 +86,12 @@ For each review item, decide which bucket. The five buckets are ordered by desce
 A *material* incorporation that names a call the plan now relies on. Use this bucket when **all** of the following hold:
 
 - The review item identifies a concrete, verifiable defect that, when fixed, *changes a load-bearing call* — adding a missing section the authoring guide requires (when the body already implies its content), reconciling a Decisions-log entry with the body it summarizes, locking a previously-ambiguous structural choice the body had two ways of expressing.
-- The fix can be made **without inventing new design** — i.e. you are tightening, splitting, renaming, relocating, or deleting existing content, not making a fresh judgment call.
-- You have **high confidence** the fix is right. If you would hesitate to defend the edit to the human in one sentence, it is not high confidence.
-- The fix does not implicitly resolve a question the plan currently lists as open. Resolving Open questions is a separate planning round.
+- The fix can be made **without inventing new design** — i.e. you are tightening, splitting, renaming, relocating, or deleting existing content, *or adopting a resolution the reviewer explicitly recommended*. Adopting the reviewer's recommended option is not "inventing new design" — it is the call the review → integrate-feedback loop exists to make. What stays out of this bucket is a fresh judgment call *neither the plan nor the reviewer* supplies an answer to.
+- You have **high confidence** the fix is right. If you would hesitate to defend the edit to the human in one sentence, it is not high confidence. When you are adopting a reviewer's recommended option, "high confidence" means: you verified the reviewer's cited evidence (per § "Verify before incorporating"), the reviewer's reasoning for the recommendation holds up, and you don't see a material consideration the reviewer missed. If the reasoning holds, adopt it — don't downgrade a sound recommendation to an Open question out of caution.
+- The fix does not implicitly resolve a question the plan *currently lists* as open. Resolving pre-existing Open questions is a separate planning round. (This is distinct from acting on a reviewer's recommendation about a *new* concern the review surfaced — that is in scope.)
 - The edit names a call the plan now relies on — so it earns a Decisions-log bullet.
 
-Examples of items that typically land here: missing Schema-section sketch when the plan already proposes columns; missing API-surface table when the plan already commits to a new resource method; an Out-of-scope bullet that contradicts an Open question (you have to pick a side); a foundational-decision rationale paragraph the body discussed but didn't capture in the numbered list.
+Examples of items that typically land here: missing Schema-section sketch when the plan already proposes columns; missing API-surface table when the plan already commits to a new resource method; an Out-of-scope bullet that contradicts an Open question (you have to pick a side); a foundational-decision rationale paragraph the body discussed but didn't capture in the numbered list; a shape question (an API verb, a column type, a lifecycle choice) where the reviewer enumerated the options and recommended one whose reasoning holds up under verification.
 
 ### Minor incorporate (edit the body directly, no Decisions-log entry)
 
@@ -112,15 +114,16 @@ If you find yourself wanting to add a Decisions-log entry to a Minor incorporate
 
 ### Open question (file it for the next round)
 
-When the review item is real but resolving it requires a human judgment call, new domain knowledge, or design work beyond mechanical reconciliation. Typical signals:
+When the review item is real but resolving it **genuinely needs a human operator** — and the reviewer's recommendation is not enough to act on. The bar here has changed: the reviewer now hands you a menu of options *and* a recommended pick with reasoning. Your default is to **adopt that recommendation** (route to Incorporate). You file an Open question only when one of these holds:
 
-- The reviewer offers multiple alternatives without one being obviously right.
-- The fix requires information not in the plan (a sample external payload, an ops confirmation, a stakeholder decision).
-- The fix would change the shape of a foundational decision, the resource contract, the schema, or the lifecycle invariants.
-- The fix is a "promote this open question to a foundational decision" recommendation — promotion is itself a planning move the human should make.
-- The fix is a category of risk (rollout, observability, partial-failure recovery) the plan has not yet sectioned for. Adding the section is design work; *naming* the gap is an open question.
+- **The choice is more nuanced than the reviewer's framing.** You see a material consideration the reviewer missed — a constraint, a downstream dependency, an interaction with another part of the plan — that makes the reviewer's recommended option no longer obviously right. (Note what the reviewer missed in the Open-question entry.)
+- **The options are genuinely balanced and the call needs context you don't have.** Once you've thought it through, the trade-offs really do cancel out, and picking correctly depends on product priorities, stakeholder input, or domain knowledge that isn't in the plan or the review.
+- **The fix requires information not in the plan or the review** — a sample external payload, an ops confirmation, a stakeholder decision — that no amount of reasoning from the current artifacts can supply.
+- **The fix is a "promote this open question to a foundational decision" recommendation** — promotion is itself a planning move the human should make.
 
-When filing an Open question from a review item: capture the question, why it's open, the indicative direction the reviewer suggested (if any), and whether it blocks anything currently in scope. Use the standard Open-question shape from the authoring guide. Do **not** copy the review item verbatim — distill it.
+What is **no longer** an automatic Open-question signal: "the reviewer offered multiple alternatives." The reviewer is *supposed* to offer alternatives — and a recommendation among them. A menu with a sound recommendation is something you act on, not something you punt.
+
+When you do file an Open question from a review item, the entry must let a human operator make the call fast — see § "When you file an Open question" below for the required shape (the options, why the human is needed, and the pros/cons that make the options roughly equal). Use the standard Open-question shape from the authoring guide. Do **not** copy the review item verbatim — distill it.
 
 ### Reviewer-wrong (the review's claim doesn't survive verification)
 
@@ -151,28 +154,30 @@ When the review item does not warrant action and is not factually wrong. Possibl
 
 Ignoring is legitimate. Do not pad the incorporate bucket out of politeness to the reviewer. But every ignore must come with a one-sentence reason you can defend.
 
-### When in doubt — but watch for over-conservatism
+### When in doubt — adopt the recommendation, don't hoard Open questions
 
-Default to **Open question** when the item is a *design-shape* call — a foundational-decision shift, a schema column change, an API verb choice, a lifecycle invariant, a cross-service contract change. The cost of an unwarranted body edit on a design-shape call (silently hard-coding a choice the human would have made differently) is higher than the cost of one extra Open-question bullet.
+The reviewer hands you a recommended option with reasoning for every judgment-call finding. Your job is to *use* it. The failure mode this skill is calibrated against is over-conservatism — routing a finding to Open questions when the reviewer already did the thinking and the recommendation holds up. Every Open question you file instead of resolving is debt the next round inherits and a human operator has to clear.
+
+So: when the item is a *design-shape* call — a foundational-decision shift, a schema column change, an API verb choice, a lifecycle invariant, a cross-service contract change — and **the reviewer recommended an option whose reasoning survives your verification**, default to **Incorporate**. Adopt the recommendation. Only fall back to **Open question** when the choice is genuinely more nuanced than the reviewer's framing (you see something the reviewer missed) or genuinely needs a human operator (balanced trade-offs, missing information) — per the Open-question bucket's signals above.
 
 Default to **Minor incorporate** when the item is a *wording / consistency / stale-text / missing-cross-link / numbering* fix. These are not design decisions; routing them to Open questions just adds noise and pads the next round's triage list.
 
-**Calibration check.** After triaging the whole review, count the buckets. The shape of a healthy *design-plan* triage is different from a healthy impl-plan triage — design-plan reviews surface a higher proportion of shape questions whose resolution is a judgment call (the Open-question bucket runs heavier), while impl-plan reviews surface more cross-sprint coherence drift (the Minor-incorporate bucket runs heavier there). Use the design-plan bands below; the impl-plan version of this skill uses different bands.
+**Calibration check.** After triaging the whole review, count the buckets. Because the reviewer now supplies a recommendation for every judgment call and your default is to adopt it, the Incorporate bucket runs heavier than it used to and the Open-question bucket runs lighter — Open questions are now the *exception* (the genuinely-needs-a-human residue), not the default home for every shape question. Use the design-plan bands below; the impl-plan version of this skill uses different bands.
 
 A healthy design-plan triage is roughly:
 
-- **5–15% Incorporate (full)** — material edits that earn a Decisions-log entry. Material incorporations are the minority of any review; a higher rate usually means fresh design calls are hiding under "incorporation."
+- **20–40% Incorporate (full)** — material edits that earn a Decisions-log entry, including adopted reviewer recommendations on shape questions. This bucket runs heavier than under the old "frame, don't resolve" posture — that is intended.
 - **15–30% Minor incorporate** — mechanical fixes (typos, marketing-language purges, missing forward-links, stale wording from superseded rounds, numbering repairs).
-- **30–50% Open question** — design-plan reviews naturally surface a high concentration of shape questions whose resolution is a judgment call. This bucket runs heavier for design plans than for impl plans.
+- **10–25% Open question** — only the genuinely-needs-a-human residue: shape questions where the reviewer's recommendation didn't survive scrutiny, the trade-offs are truly balanced, or required information is missing. If this bucket is large, you are probably being too conservative — re-check that you adopted every sound recommendation.
 - **0–10% Reviewer-wrong** — a small but non-zero rate is normal. A rate above ~20% is a signal that the review itself should be re-run rather than triaged; surface this to the user.
 - **5–15% Ignore** — duplicate / out-of-scope / over-engineering / authoring-guide-contradicting / stylistic items.
 
-Combined Incorporate + Minor incorporate is typically 20–45%.
+Combined Incorporate + Minor incorporate is typically 45–65%.
 
 Out-of-band signals:
 
-- If **Open question is holding more than ~60% of items**, re-triage the boundary cases — you are being too conservative. Default-to-Open-question is a safety net for genuine judgment calls, not a default for everything you'd rather not commit to. The whole point of running review → integrate-feedback is to converge the plan, not to pad the Open Questions list with debt that the next round inherits.
-- If **Incorporate (full) is holding more than ~25%**, re-check whether you're making fresh design calls under the cover of "incorporation." Material incorporations should still be the minority — most reviewer-surfaced findings are either mechanical (Minor incorporate) or judgment calls (Open question).
+- If **Open question is holding more than ~35% of items**, re-triage the boundary cases — you are being too conservative. For each Open-question item, ask: *did the reviewer recommend an option, and does its reasoning survive verification?* If yes, it belongs in Incorporate. Open questions are the residue of genuine human-needed calls — not the default home for findings you'd rather not commit to. The whole point of running review → integrate-feedback is to converge the plan with minimal human intervention.
+- If **Incorporate (full) is holding more than ~45%**, re-check whether you're making fresh design calls the reviewer did *not* recommend — adopting a reviewer's recommendation is in scope, inventing your own resolution is not. Also check you're not promoting Minor incorporates.
 - If **Minor incorporate is holding more than ~50%**, the review may be heavy on style / wording nits (a sign the plan is structurally sound and the review is flailing for findings). The triage is fine, but flag the pattern in the report — the user may want a different review prompt next time.
 - If **Reviewer-wrong is holding more than ~20%**, the review's reliability is the bottleneck — stop, report the rate to the user, and let them decide whether to re-run the review with a different reviewer / prompt rather than continue triaging a noisy artifact.
 
@@ -192,7 +197,11 @@ When you file an Open question:
 
 - Place it at the end of the existing Open-questions list, numbered sequentially. Do not renumber existing entries.
 - **Tag at creation** with exactly one of `[blocks-v1]`, `[blocks-impl]`, `[deferred]`, `[exploratory]` per [design-plan.md § "Open questions" → "Severity tag taxonomy"](../trellis-design-create/design-plan.md). Pick the most blocking tag that applies. If the reviewer's framing makes the tag obvious, use it; if not, default to `[blocks-impl]` for shape questions whose answer the impl plan needs and `[exploratory]` for context-only mentions.
-- Each entry: the tag (in square brackets after the bold title); the question (one sentence); why it's open / what makes it hard; indicative direction (or explicit "deferred until X" for `[deferred]` entries); the named blockee for `[blocks-v1]` / `[blocks-impl]` entries.
+- **Make the entry decision-ready.** Because you are surfacing this *instead of* deciding it, the entry must give a human operator everything they need to make the call in one sitting. Include:
+  - **The options.** Enumerate the realistic resolutions (carry the reviewer's menu forward, refined by your own analysis — don't just paste it).
+  - **Why this needs a human.** State plainly why you didn't adopt the reviewer's recommendation: the consideration the reviewer missed, the missing information, or the fact that the trade-offs are genuinely balanced. Be specific — "needs product input on X" beats "judgment call."
+  - **Pros and cons per option.** For each option, the concrete upside and the concrete cost — enough that the human can see *why the options are roughly equal* and what tips the balance. If one option is mildly preferable, say so and say what would have to be true for the other to win.
+- Also include: the tag (in square brackets after the bold title); the question (one sentence); the named blockee for `[blocks-v1]` / `[blocks-impl]` entries; or explicit "deferred until X" for `[deferred]` entries.
 - Cross-link to the originating review item by quoting a short phrase from the review (in italics) so the human can trace it back.
 
 When you ignore:
@@ -215,7 +224,7 @@ If a review item recommends changes outside the plan file, treat those as Open q
 2. **Enumerate the review items.** Most reviews are already itemized (numbered concerns / nits). Treat each numbered item as one unit. If a review item bundles multiple sub-points, split it into sub-units before triaging — each sub-unit gets its own bucket.
 3. **First-pass triage** each unit into incorporate / minor-incorporate / open-question / ignore. Keep a running internal table: `unit-id, bucket, one-line rationale`. Reviewer-wrong is a *result* of verification (Step 4), not a first-pass call.
 4. **Verify every Incorporate-bucket item** before applying it. For each, confirm the cited section / cross-reference / convention claim against the actual source per § "Verify before incorporating." Items whose cited evidence doesn't hold move to **Reviewer-wrong** — do not edit the plan based on a claim that didn't survive verification. Minor incorporate, Open question, and Ignore items skip verification (see § "When verification is required").
-5. **Calibration check.** Count the buckets against the design-plan bands in § "The triage rule" → "Calibration check" (target ~5–15% Incorporate, ~15–30% Minor, ~30–50% Open question, 0–10% Reviewer-wrong, ~5–15% Ignore). If Open question holds >60%, re-triage boundary cases. If Incorporate (full) holds >25%, re-check for fresh design calls hiding under "incorporation." If Reviewer-wrong holds >20%, **stop and surface this to the user** — the review may need to be re-run rather than triaged.
+5. **Calibration check.** Count the buckets against the design-plan bands in § "The triage rule" → "Calibration check" (target ~20–40% Incorporate, ~15–30% Minor, ~10–25% Open question, 0–10% Reviewer-wrong, ~5–15% Ignore). If Open question holds >35%, re-triage boundary cases — for each, check whether the reviewer recommended an option whose reasoning survives verification; if so, it belongs in Incorporate. If Incorporate (full) holds >45%, re-check for fresh design calls the reviewer did not recommend. If Reviewer-wrong holds >20%, **stop and surface this to the user** — the review may need to be re-run rather than triaged.
 6. **Apply incorporations** in dependency order: structural moves (split a bundled question, add a missing section) before within-section edits. Apply Incorporate and Minor incorporate items in the same pass; the only difference at edit time is whether a Decisions-log entry is added afterward. Make all edits via the `Edit` tool against the plan file; do not rewrite the whole file unless the volume of edits genuinely warrants it.
 7. **Apply Open-question additions** as a single batch at the end of the existing Open-questions list.
 8. **Update Decisions log** with one bullet per *material* incorporation (Incorporate bucket only; Minor incorporates do not earn entries), all tagged with the same new round number.
@@ -238,7 +247,7 @@ Two sub-lists:
 
 ### Added to Open questions
 
-A bulleted summary of items filed for the next round. Each bullet: the question (one short phrase) + a one-sentence reason it's a judgment call rather than a mechanical fix.
+A bulleted summary of items filed for the next round — these should be the exception, not the bulk of the triage. Each bullet: the question (one short phrase) + why it needed a human rather than the reviewer's recommendation (the consideration the reviewer missed, the missing information, or the genuinely-balanced trade-off). If this section is long, double-check you didn't punt recommendations you could have adopted.
 
 ### Reviewer-wrong (verification failures)
 
