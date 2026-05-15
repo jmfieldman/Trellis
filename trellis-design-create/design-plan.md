@@ -254,6 +254,16 @@ A bulleted list of decisions made during prior rounds, each tagged with the roun
 
 Each bullet leads with a bold phrase that names the call. The list lets a returning collaborator scan to current state without re-reading the body. It also prevents re-litigation: when a future round wants to revisit a decision, the bullet is the anchor it argues against.
 
+#### Compressing older entries
+
+The Decisions log grows monotonically as rounds accumulate. Without active pruning, R20's reader is wading through ten rounds of obsolete detail to find what's load-bearing now. When you append a new entry, also walk the older entries and condense any whose detail no longer carries weight:
+
+- **Superseded entries.** A bullet whose call has been replaced by a later round keeps its round tag and bold lead but drops the rationale paragraph: `- **<lead>.** Superseded by R<m>. (R<n>)`. The audit trail (round number + supersession pointer) survives; the now-irrelevant prose does not.
+- **Resolved-and-irrelevant sub-decisions.** A bullet that locked a detail whose parent decision is itself now superseded can be collapsed to the same one-line marker, or removed entirely if the parent's supersession entry already names the sub-decision's death.
+- **Ancient detail that still holds but no longer needs the full rationale.** A 20-round-old decision that's still load-bearing but settled enough that nobody re-litigates it can drop its defense paragraph and keep just the bold lead + tag.
+
+Keep the last 2–3 rounds in full; keep any still-actively-load-bearing entry in full regardless of age. The goal: a returning collaborator skims the log in seconds, not minutes, and the entries they see at full length are the ones that still shape the design.
+
 ### 15. Status / Rounds
 
 A flat numbered list — one entry per planning round — capturing what changed *and* what to focus on next:
@@ -270,6 +280,15 @@ Each entry has two clauses:
 2. **`_Next:_` clause** — a one-line italic tail naming the recommended next-round focus, citing the Open question(s) by ID + tag. This persists the agent's between-rounds recommendation into the doc itself, so a user picking the doc up a week later via `trellis-design-iterate` doesn't lose the chat-only handoff context. When the plan is complete, the `_Next:_` clause is `graduate to implementation plan` (or `run trellis-design-review for an external check first`).
 
 The Rounds log is the doc's git log. Scan it to recover narrative context: "why does the doc say X" → "round 5 supersedes round 3 because Y." Read the latest `_Next:_` clause to recover the agent's prior recommendation for what to work on now.
+
+#### Compressing older Status entries
+
+Like the Decisions log, the Rounds log grows monotonically and needs active pruning. When you append a new round, also walk the older entries and condense any whose detail no longer carries weight:
+
+- **Rounds whose `_Next:_` clause is long-finished** (the work it recommended landed many rounds ago) can drop the `_Next:_` clause entirely.
+- **Rounds whose summary detail is no longer load-bearing** (the decisions they narrate were themselves superseded by later rounds, and the supersession is recorded in the superseding round's entry) can collapse to a one-line summary: `**Round <n>**: <one-clause summary>`. The supersession pointer must remain readable somewhere — either in the older entry's residual line, or (cleaner) in the superseding entry.
+
+Keep the last 2–3 rounds in full so the recent trajectory and the current `_Next:_` are intact. Never delete a round entry outright — the round numbering must stay contiguous and grep-able. The goal is to keep the log skimmable as N grows, not to falsify the audit trail.
 
 ### 16. See also
 
@@ -608,5 +627,6 @@ Explicitly not a sprint plan — call that out in the heading.>
 - **Tag every Decisions-log bullet with `(R<n>)`** so the audit trail is intact.
 - **Update Status every round**, even if the round was small.
 - **Purge stale wording** when a round supersedes it; trust the Decisions/Status logs to carry the audit trail.
+- **Compress older log entries** that no longer carry weight — superseded Decisions-log bullets keep their tag and supersession pointer but drop the rationale paragraph; ancient Status rounds whose `_Next:_` is long-finished collapse to a one-line summary. Keep the last 2–3 rounds and any still-load-bearing entry in full. See § 14 and § 15.
 - **Prefer concrete over abstract**: an example JSON, an actual SQL fragment, a typed interface sketch — over prose paraphrase.
 - **Surface alternatives, don't decide unilaterally** when the user has skin in the game.

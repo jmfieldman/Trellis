@@ -69,8 +69,9 @@ For every question the user resolved this round, in the same edit pass:
 
 1. **Rewrite the affected body section** to reflect the chosen design. Purge the obsolete wording — do not leave both old and new versions side-by-side. Supersession discipline is described in [design-plan.md § "Supersession"](../trellis-design-create/design-plan.md).
 2. **Add a tagged bullet to the Decisions log** with the next round number, e.g. `(R<n>)`. Each bullet leads with a **bold phrase** that names the call.
-3. **Remove the resolved entry from Open questions.** Do not append `(resolved)` in place — the entry **moves** to Decisions log. Do not renumber remaining entries.
-4. **Add any newly-surfaced sub-questions** to Open questions for the next round. Tag each at creation with exactly one of `[blocks-v1]` / `[blocks-impl]` / `[deferred]` / `[exploratory]` per [design-plan.md § "Severity tag taxonomy"](../trellis-design-create/design-plan.md). For `[blocks-v1]` / `[blocks-impl]` entries, name the specific blockee.
+3. **Compress older Decisions-log entries** that this round (or an earlier round) has superseded, and any entries whose details have gone stale. Condense them to a one-line marker that preserves the round tag and supersession pointer (`- **<lead>.** Superseded by R<m>. (R<n>)`); drop the rationale paragraph. Keep the last 2–3 rounds and any still-actively-load-bearing entry in full regardless of age. See [design-plan.md § 14 → "Compressing older entries"](../trellis-design-create/design-plan.md). The audit trail (round number + supersession link) must survive; only obsolete prose is dropped.
+4. **Remove the resolved entry from Open questions.** Do not append `(resolved)` in place — the entry **moves** to Decisions log. Do not renumber remaining entries.
+5. **Add any newly-surfaced sub-questions** to Open questions for the next round. Tag each at creation with exactly one of `[blocks-v1]` / `[blocks-impl]` / `[deferred]` / `[exploratory]` per [design-plan.md § "Severity tag taxonomy"](../trellis-design-create/design-plan.md). For `[blocks-v1]` / `[blocks-impl]` entries, name the specific blockee.
 
 ### Step 5 — Re-read affected sections
 
@@ -113,7 +114,9 @@ Why the `_Next:_` clause: it persists the chat-only hand-off recommendation into
 
 Pick the `_Next:_` clause from your completeness assessment's "Recommended next-round focus" (Step 8) — they should agree. If the plan is complete, the `_Next:_` clause is `graduate to implementation plan` (or `run trellis-design-review for an external check first` if the user asked for one).
 
-Cite supersessions explicitly when they happened (e.g., `R7 supersedes R5's contiguity-cache rule`). Status entries are append-only — never edit prior entries.
+Cite supersessions explicitly when they happened (e.g., `R7 supersedes R5's contiguity-cache rule`). Status entries are append-only **for the round you are appending** — never edit *prior* entries to falsify what happened.
+
+However, **compress older Status entries** that no longer carry weight. When you append the new round, walk the older entries and condense any whose `_Next:_` clause is long-finished (drop the `_Next:_` clause) or whose summary detail is no longer load-bearing because later rounds superseded it (collapse to `**Round <n>**: <one-clause summary>`). Keep the last 2–3 rounds in full. Never delete a round entry outright — round numbering must stay contiguous and grep-able. See [design-plan.md § 15 → "Compressing older Status entries"](../trellis-design-create/design-plan.md). The compression is *not* a falsification: the entries that gain detail (the superseding round) and the entries that lose detail (the superseded round) are consistent with what actually happened; obsolete prose is dropped, the audit trail is preserved.
 
 ### Step 8 — Emit the completeness assessment to chat
 

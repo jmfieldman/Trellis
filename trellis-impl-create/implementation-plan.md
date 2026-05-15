@@ -378,6 +378,8 @@ Bulleted list of cross-cutting decisions made during prior rounds, each tagged w
 - **Push fan-out is post-commit and best-effort; outbox deferred.** (R5)
 ```
 
+The same compression discipline applies at both the overview level and every sprint's local Decisions log: when a later round supersedes a bullet, condense the older entry to its bold lead + round tag + supersession pointer (`- **<lead>.** Superseded by R<m>. (R<n>)`) and drop the rationale paragraph. Decisions that are still actively load-bearing keep their full defense regardless of age; obsolete ones do not. Keep the last 2–3 rounds in full. The audit trail (round number + supersession link) survives compression; the obsolete prose does not.
+
 ### 12. Status
 
 Round-by-round audit trail at the overview level. Each entry has two clauses — what changed, and a `_Next:_` clause naming the recommended next-round focus:
@@ -392,6 +394,8 @@ Clause discipline:
 
 1. **What changed.** Summary of resolutions / re-slices / supersessions in this round. Cite supersessions explicitly (`R5 supersedes R3's helper-in-Sprint-06 decision`).
 2. **`_Next:_` clause** — a one-line italic tail naming the recommended next-round focus. Cite Open question IDs + tags + scope when relevant (`overview Q4 [blocks-v1]`, `Sprint 03 Q2 [blocks-impl]`). This persists the between-rounds recommendation into the doc itself, so a user resuming via `trellis-impl-iterate` recovers the prior recommendation without depending on chat history. When the plan is complete, the `_Next:_` clause is `hand off to implementation` (or `run trellis-impl-review first`).
+
+**Compressing older Status entries.** Like the Decisions log, the Status log grows monotonically as rounds accumulate; without active pruning, a long plan's overview log becomes unreadable. When you append a new round, also walk the older entries and condense any whose detail no longer carries weight: rounds whose `_Next:_` clause is long-finished drop the clause entirely; rounds whose summary detail is no longer load-bearing (the decisions they narrate were themselves superseded by later rounds) collapse to a one-line summary `**Round <n>**: <one-clause summary>`. Keep the last 2–3 rounds in full, and never delete a round outright — the numbering must stay contiguous and grep-able. The same applies to any per-sprint Status / Feedback-incorporated log inside a sprint file.
 
 ### 13. What this plan does *not* try to do
 
@@ -1221,6 +1225,7 @@ Created lazily — the first sprint to ship creates this file in the same PR tha
 - **Move an Open question to Decisions log** the moment it resolves; never mark "(resolved)" in place.
 - **Tag every Decisions-log bullet with `(R<n>)`** so the audit trail is intact.
 - **Update Status every round**, even if the round was small.
+- **Compress older log entries** that no longer carry weight — superseded Decisions-log bullets keep their tag and supersession pointer but drop the rationale paragraph; ancient Status rounds whose `_Next:_` is long-finished collapse to a one-line summary. Keep the last 2–3 rounds and any still-load-bearing entry in full. Applies to overview-level and per-sprint logs alike. See § 11 and § 12.
 - **Update `progress.md` whenever step structure changes** — a re-sliced sprint regenerates the master checklist in the same round.
 - **Distill the sprint's Post Mortem into `post-mortem.md`** in the same PR that checks off the sprint's final step — creating the file if it doesn't yet exist. An empty entry (`_No post-mortem-worthy observations._`) is fine; a missing entry is not.
 - **Purge stale wording** when a round supersedes it; trust the Decisions/Status logs to carry the audit trail.

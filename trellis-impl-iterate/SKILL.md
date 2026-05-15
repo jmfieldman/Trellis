@@ -90,8 +90,9 @@ Within a single file:
 
 1. **Rewrite the affected section** to reflect the chosen design. Purge obsolete wording — do not leave both old and new versions side-by-side. Supersession discipline is described in [implementation-plan.md § "Supersession"](../trellis-impl-create/implementation-plan.md).
 2. **Add a tagged bullet to the relevant Decisions log** with `(R<n>)`. Cross-cutting calls go in `overview.md`'s log; sprint-scoped calls go in the affected sprint file's log. Each bullet leads with a **bold phrase** naming the call.
-3. **Remove the resolved entry from Open questions** at the right scope. Do not append `(resolved)` in place — entries **move** to Decisions log.
-4. **Add newly-surfaced sub-questions** to the right Open-questions list (overview vs. sprint). Keep them numbered append-only.
+3. **Compress older Decisions-log entries** at every scope this round touched. Walk both `overview.md`'s log and the affected sprint files' logs; condense any entry that this round (or an earlier round) has superseded, plus any entry whose details have gone stale. Compressed form: `- **<lead>.** Superseded by R<m>. (R<n>)` — round tag + supersession pointer preserved, rationale paragraph dropped. Keep the last 2–3 rounds and any still-actively-load-bearing entry in full. See [implementation-plan.md § 11](../trellis-impl-create/implementation-plan.md). The audit trail survives; only obsolete prose is dropped.
+4. **Remove the resolved entry from Open questions** at the right scope. Do not append `(resolved)` in place — entries **move** to Decisions log.
+5. **Add newly-surfaced sub-questions** to the right Open-questions list (overview vs. sprint). Keep them numbered append-only.
 
 Across files (multi-file edits):
 
@@ -161,7 +162,9 @@ Pick the `_Next:_` clause from your completeness assessment's "Recommended next-
 
 Cite supersessions explicitly (e.g., `R7 supersedes R5's contiguity-cache rule`; `re-sliced 06 into 06-resolve and 07-deduplicate; renumbered 07–10 → 08–11`).
 
-If the round materially changed a single sprint, append a sprint-scoped Status / Feedback-incorporated entry to that sprint file too. Status entries are append-only — never edit prior entries.
+If the round materially changed a single sprint, append a sprint-scoped Status / Feedback-incorporated entry to that sprint file too. Status entries are append-only **for the round you are appending** — never edit *prior* entries to falsify what happened.
+
+However, **compress older Status entries** that no longer carry weight. When you append the new round, walk both `overview.md`'s Status log and any sprint-level Status / Feedback-incorporated logs; condense entries whose `_Next:_` clause is long-finished (drop the `_Next:_`) or whose round-summary detail is no longer load-bearing because later rounds superseded it (collapse to `**Round <n>**: <one-clause summary>`). Keep the last 2–3 rounds in full at each scope. Never delete a round entry outright — round numbering must stay contiguous and grep-able. See [implementation-plan.md § 12](../trellis-impl-create/implementation-plan.md). Compression is *not* falsification: obsolete prose is dropped, the audit trail (round number + supersession link) is preserved.
 
 ### Step 8 — Emit the completeness assessment to chat
 
