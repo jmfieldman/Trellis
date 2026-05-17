@@ -116,7 +116,7 @@ flowchart TD
 
 3. **Once the design plan is `complete`** (zero `[blocks-v1]` / `[blocks-impl]` open questions remaining, doc internally clean), graduate to implementation planning.
 
-4. **Bootstrap the implementation plan.** Invoke `trellis-impl-create <design-plan-path> <impl-plan-dir>`. Round 1 produces a directory: `overview.md` (philosophy, sprint roster, dependency graph, feature-wide locked decisions), `progress.md` (master checklist), and one stub file per sprint (`01-<topic>.md`, `02-<topic>.md`, …).
+4. **Bootstrap the implementation plan.** Invoke `trellis-impl-create <design-plan-path> <impl-plan-dir>`. Round 1 produces a directory: `overview.md` (philosophy, sprint roster, dependency graph, feature-wide locked decisions — no Decisions log or Status section), `decisions.md` (plan-level Decisions log — its own top-level file), `status.md` (plan-level round-by-round audit trail — its own top-level file), `progress.md` (master checklist), and one stub file per sprint (`01-<topic>.md`, `02-<topic>.md`, …).
 
 5. **Iterate the implementation plan.** Same shape as design:
    - `trellis-impl-iterate <impl-plan-dir>` to drive the next round (typically: lock one stub sprint to execution-ready, or resolve a handful of open questions, or re-slice the roster).

@@ -17,7 +17,9 @@ This skill stops at the end of Round 1. Subsequent rounds (fleshing out individu
 
 A new directory at the user-supplied path, containing:
 
-- `overview.md` — populated framing, philosophy, locked feature-wide decisions, sprint roster + dependency graph, initial Open Questions, and a `Round 1` Status entry.
+- `overview.md` — populated framing, philosophy, locked feature-wide decisions, sprint roster + dependency graph, initial Open Questions. **No Decisions log or Status section inside `overview.md`** — those are separate top-level files.
+- `decisions.md` — the plan-level (cross-cutting) Decisions log. Starts empty or with `(R1)`-tagged entries capturing the slicing decisions agreed in Round 1.
+- `status.md` — the plan-level round-by-round audit trail. Starts with a single `**Round 1**: scaffolding + sprint roster + open questions enumerated. _Next:_ …` entry.
 - `progress.md` — master checklist scaffolded with one section per sprint (steps left blank or as best-effort placeholders).
 - One stub file per sprint — `01-<topic>.md`, `02-<topic>.md`, … — each containing at minimum: Goal, Prerequisites, Deliverables (best-effort first cut), Out of scope, and an initial sprint-level Open Questions list.
 
@@ -39,7 +41,7 @@ Before starting, the agent must have:
 2. **The output path** for the implementation plan directory. Create this directory if it doesn't exist.
 3. **The implementation plan specification.** Read [implementation-plan.md](./implementation-plan.md) before producing any files — the document anatomy, file naming, and section ordering rules in that spec are mandatory.
 4. **Project context.** Skim the project's `CLAUDE.md`, `AGENTS.md` (or equivalent) so the locked decisions in `overview.md` reflect actual project conventions (test framework, schema-edit authorization, migration policy, idempotency keys, logging, etc.). Don't restate the conventions section verbatim — pin the things every sprint will inherit and link to the project doc for the rest.
-5. **(If they exist) one or more analogue implementation plans in the repo or adjacent repos.** Borrowing structure from a precedent is encouraged — naming conventions, locked-decisions tables, sprint-roster format. Cite the analogue in your Round 1 Status entry so the user can see the lineage.
+5. **(If they exist) one or more analogue implementation plans in the repo or adjacent repos.** Borrowing structure from a precedent is encouraged — naming conventions, locked-decisions tables, sprint-roster format. Cite the analogue in your Round 1 entry in `status.md` so the user can see the lineage.
 
 If any of these are missing, **stop and ask the user** before producing files. Don't guess at the design plan's intent.
 
@@ -84,7 +86,7 @@ Ask the user: does this slicing match their mental model? Are there sprints they
 
 ### Step C — Scaffold the directory
 
-Once slicing is agreed, create the directory and the three required artifact types.
+Once slicing is agreed, create the directory and the five required artifact types (`overview.md`, `decisions.md`, `status.md`, `progress.md`, one stub per sprint). See [implementation-plan.md § "Directory layout"](./implementation-plan.md) for the canonical file list.
 
 #### `overview.md`
 
@@ -101,10 +103,29 @@ Populate every section the implementation plan spec lists, scaled to what's actu
 - **Feature-wide locked decisions** — the table you sketched in Step A.
 - **Out-of-scope across all sprints** — the list you assembled in Step A.
 - **Open questions** — anything from the design plan still marked open that affects sprint shape, plus any new questions surfaced by the slicing discussion in Step B.
-- **Decisions log** — start empty, or with `(R1)`-tagged entries that capture the slicing decisions agreed in Step B.
-- **Status** — one entry: `**Round 1**: scaffolding + sprint roster + open questions enumerated. _Next:_ <one-line recommended Round 2 focus — usually "lock Sprint 01 to execution-ready" or, if a particular Open question gates Sprint 01, the question ID + tag + scope>.` The `_Next:_` clause persists the chat hand-off recommendation into the doc itself so a user resuming via `trellis-impl-iterate` recovers it without depending on chat history.
 - **What this plan does *not* try to do** — short list at overview level, distinct from per-sprint Out of scope.
-- **How to read each sprint** — the standard one-paragraph blurb pointing at the sprint anatomy.
+- **How to read each sprint** — the standard one-paragraph blurb pointing at the sprint anatomy. Mention that cross-cutting decisions live in `decisions.md` and the round-by-round audit trail lives in `status.md`.
+
+> **Do not add a Decisions log or Status section inside `overview.md`.** Those are separate top-level files (`decisions.md`, `status.md`) — see below.
+
+#### `decisions.md`
+
+Create the file. Body starts with the standard framing block (`> Part of the [<Feature> Implementation Plan](./overview.md). Cross-cutting decisions only…`) and either:
+
+- An **empty bullet list** (most common in Round 1), or
+- One or more `(R1)`-tagged bullets capturing the cross-cutting slicing decisions agreed in Step B.
+
+See [implementation-plan.md § "`decisions.md` anatomy"](./implementation-plan.md) for the format. Don't fabricate decisions just to populate the file — empty + framing block is a perfectly valid Round 1 state.
+
+#### `status.md`
+
+Create the file. Body starts with the standard framing block (`> Part of the [<Feature> Implementation Plan](./overview.md). Plan-level round-by-round audit trail…`) and exactly one entry:
+
+```
+- **Round 1**: scaffolding + sprint roster + open questions enumerated. _Next:_ <one-line recommended Round 2 focus — usually "lock Sprint 01 to execution-ready" or, if a particular Open question gates Sprint 01, the question ID + tag + scope>.
+```
+
+The `_Next:_` clause persists the chat hand-off recommendation into the doc itself so a user resuming via `trellis-impl-iterate` recovers it without depending on chat history. See [implementation-plan.md § "`status.md` anatomy"](./implementation-plan.md) for the format.
 
 #### Stub sprint files (`NN-<topic>.md`)
 
@@ -166,7 +187,7 @@ Fix the issues you find before handing back to the user. A scaffolded plan with 
 
 ### Step D — Hand back to the user
 
-After all files are written, summarize what you produced (overview + N stubs + progress) and propose what Round 2 should focus on. The recommended Round 2 default is "flesh out Sprint 01 to execution-ready" — the foundational sprint usually has the highest density of unresolved sprint-level decisions, and locking it informs later sprints.
+After all files are written, summarize what you produced (overview + decisions + status + progress + N stubs) and propose what Round 2 should focus on. The recommended Round 2 default is "flesh out Sprint 01 to execution-ready" — the foundational sprint usually has the highest density of unresolved sprint-level decisions, and locking it informs later sprints.
 
 Stop. Don't auto-progress to Round 2.
 
@@ -211,7 +232,9 @@ What's explicitly *not* expected after Round 1:
 After the scaffold is written, message the user along these lines:
 
 > Round 1 scaffold landed at `<path>`:
-> - `overview.md` (philosophy, sprint roster, dependency graph, feature-wide locked decisions, open questions)
+> - `overview.md` (philosophy, sprint roster, dependency graph, feature-wide locked decisions, open questions — no Decisions log or Status section)
+> - `decisions.md` (plan-level Decisions log — empty / R1 entries only)
+> - `status.md` (plan-level Status log — Round 1 entry)
 > - `progress.md` (master checklist; per-sprint step lists empty until each sprint is decomposed)
 > - `01-<topic>.md` … `NN-<topic>.md` (Round 1 stubs — Goal, Prerequisites, Deliverables, Out of scope, Open questions)
 >

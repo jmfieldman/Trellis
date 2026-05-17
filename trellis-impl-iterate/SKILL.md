@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 Skill prompt for an LLM agent. Activated when a user wants to drive an existing **implementation plan** through one more planning round (Round 2 onward).
 
-The implementation plan is a **directory** of markdown files (`overview.md`, `progress.md`, sprint files, optionally `post-mortem.md`), not a single document. Most planning failures hide in the seams between files — every rule in this prompt is calibrated to keep those seams coherent.
+The implementation plan is a **directory** of markdown files (`overview.md`, `decisions.md`, `status.md`, `progress.md`, sprint files, optionally `post-mortem.md`), not a single document. **`decisions.md` and `status.md` are top-level files — not sections inside `overview.md`.** Most planning failures hide in the seams between files — every rule in this prompt is calibrated to keep those seams coherent.
 
 The round mechanics below are **load-bearing** and easy to drop under load. Read the prompt end-to-end every invocation; do not rely on memory of prior rounds.
 
@@ -25,9 +25,11 @@ Before doing anything, in this order:
 
 1. Read the [Implementation Plan Documents — Authoring Guide](../trellis-impl-create/implementation-plan.md) end to end. Do not skim.
 2. Read **every file** in the plan directory at `$0`, top to bottom, in this order:
-   - `overview.md` — internalize philosophy, locked decisions, sprint roster, dependency graph, open questions, Status log.
+   - `overview.md` — internalize philosophy, feature-wide locked decisions, sprint roster, dependency graph, open questions.
+   - `decisions.md` — the plan-level (cross-cutting) Decisions log. Note the latest round tag.
+   - `status.md` — the plan-level round-by-round audit trail. Note the current round number and the latest `_Next:_` clause.
    - `progress.md` — note which steps are checked off (some sprints may have shipped).
-   - Each sprint file in numeric order (`01-*.md`, `02-*.md`, …) — Goal, Prerequisites, Deliverables, Out of scope, Locked decisions, Architecture notes, Public surface, Steps, Step Dependency Chart, Acceptance checklist, Open questions, Status / Deviations.
+   - Each sprint file in numeric order (`01-*.md`, `02-*.md`, …) — Goal, Prerequisites, Deliverables, Out of scope, Locked decisions, Architecture notes, Public surface, Steps, Step Dependency Chart, Acceptance checklist, Open questions, sprint-scoped Decisions log, sprint-scoped Status / Feedback-incorporated / Deviations.
    - `post-mortem.md` if it exists.
 3. Read the source design plan that `overview.md` cites in its framing block. The implementation plan implements the design plan; conflicts go back to the design plan, not into a sprint step.
 4. Skim the project's `CLAUDE.md` (or equivalent) for conventions, banned patterns, authorization rules.
@@ -46,9 +48,9 @@ Every round follows the same shape, regardless of whether the round is fleshing 
 
 Before saying anything substantive, internally note:
 
-- The plan's current Round number per `overview.md`'s Status log (next entry will be `Round N+1`).
+- The plan's current Round number per `status.md` (next entry will be `Round N+1`).
 - Open questions at every scope — overview-level + per-sprint — with counts.
-- Most recent Decisions log entries at every scope.
+- Most recent Decisions log entries at every scope (plan-level in `decisions.md`; sprint-scoped inside each sprint file).
 - Which sprints have shipped (final step `[x]` in `progress.md`) — those bodies are mostly read-only; capture corrections via "Feedback incorporated" or "Deviations applied during implementation" surfaces.
 - Which sprints are still stubs vs. execution-ready (an execution-ready sprint has a populated Locked Decisions table, Architecture notes, Implementation Steps with concrete Verification, Step Dependency Chart, and Acceptance checklist).
 - Any wording the most recent Status entry called out as superseded.
@@ -60,7 +62,7 @@ Pick **one** of these focuses (a round that tries to do all of them at once usua
 - **Lock a single sprint to execution-ready.** Take a stub sprint and populate its Locked Decisions (10–25 rows), Architecture notes, Public surface, Implementation Steps with Goal/Actions/Deliverables/Verification, Step Dependency Chart, Acceptance checklist. The most common round shape after Round 1.
 - **Resolve 1–5 overview-level Open questions.** When the questions are reasonably independent and don't snowball.
 - **Resolve 1–5 sprint-level Open questions** within a single sprint.
-- **Re-slice the sprint roster.** Splitting / folding / re-numbering sprints. Update `overview.md`'s roster and dependency graph, rename sprint files, regenerate `progress.md`, and call out the supersession in the Status entry.
+- **Re-slice the sprint roster.** Splitting / folding / re-numbering sprints. Update `overview.md`'s roster and dependency graph, rename sprint files, regenerate `progress.md`, and call out the supersession in this round's `status.md` entry.
 - **Fix cross-sprint coherence drift.** Prerequisite ↔ Deliverable name mismatches, dependency-graph contradictions, `progress.md` ↔ per-sprint Progress drift.
 
 If the user named a focus, that's the round. Don't expand beyond what they asked for unless you flag the expansion explicitly.
@@ -80,7 +82,7 @@ For sprint-locking rounds, additionally surface:
 
 Then **wait for the user**. Do not auto-resolve. Do not pre-decide structure. Even when you have a strong opinion, the user picks.
 
-If the user says "you pick," capture each call as a `(R<n>)` Decisions log entry tagged with rationale, and surface the unilateral decisions in the round hand-off so the user can react.
+If the user says "you pick," capture each call as a `(R<n>)` Decisions log entry tagged with rationale — cross-cutting calls in `decisions.md`, sprint-scoped calls in the affected sprint file — and surface the unilateral decisions in the round hand-off so the user can react.
 
 ### Step 4 — Update the affected files
 
@@ -89,14 +91,14 @@ For every resolution, edits land in **all** the files that surface holds. Many e
 Within a single file:
 
 1. **Rewrite the affected section** to reflect the chosen design. Purge obsolete wording — do not leave both old and new versions side-by-side. Supersession discipline is described in [implementation-plan.md § "Supersession"](../trellis-impl-create/implementation-plan.md).
-2. **Add a tagged bullet to the relevant Decisions log** with `(R<n>)`. Cross-cutting calls go in `overview.md`'s log; sprint-scoped calls go in the affected sprint file's log. Each bullet leads with a **bold phrase** naming the call.
-3. **Compress older Decisions-log entries** at every scope this round touched. Walk both `overview.md`'s log and the affected sprint files' logs; condense any entry that this round (or an earlier round) has superseded, plus any entry whose details have gone stale. Compressed form: `- **<lead>.** Superseded by R<m>. (R<n>)` — round tag + supersession pointer preserved, rationale paragraph dropped. Keep the last 2–3 rounds and any still-actively-load-bearing entry in full. See [implementation-plan.md § 11](../trellis-impl-create/implementation-plan.md). The audit trail survives; only obsolete prose is dropped.
+2. **Add a tagged bullet to the relevant Decisions log** with `(R<n>)`. Cross-cutting calls go in **`decisions.md`** (the plan-level top-level file — not a section inside `overview.md`); sprint-scoped calls go in the affected sprint file's Decisions log section. Each bullet leads with a **bold phrase** naming the call.
+3. **Compress older Decisions-log entries** at every scope this round touched. Walk both `decisions.md` and the affected sprint files' Decisions logs; condense any entry that this round (or an earlier round) has superseded, plus any entry whose details have gone stale. Compressed form: `- **<lead>.** Superseded by R<m>. (R<n>)` — round tag + supersession pointer preserved, rationale paragraph dropped. Keep the last 2–3 rounds and any still-actively-load-bearing entry in full. See [implementation-plan.md § "`decisions.md` anatomy"](../trellis-impl-create/implementation-plan.md). The audit trail survives; only obsolete prose is dropped.
 4. **Remove the resolved entry from Open questions** at the right scope. Do not append `(resolved)` in place — entries **move** to Decisions log.
 5. **Add newly-surfaced sub-questions** to the right Open-questions list (overview vs. sprint). Keep them numbered append-only.
 
 Across files (multi-file edits):
 
-1. **List every file the resolution will touch before editing any of them.** Which file owns the canonical wording? Which files reference it? Does `overview.md` need updating (module-tree, dependency-graph one-liner, sprint roster, feature-wide locked decisions)? Does `progress.md` need updating? Does the affected sprint's per-sprint Progress section need to mirror a `progress.md` change?
+1. **List every file the resolution will touch before editing any of them.** Which file owns the canonical wording? Which files reference it? Does `overview.md` need updating (module-tree, dependency-graph one-liner, sprint roster, feature-wide locked decisions)? Do `decisions.md` or `status.md` need a new entry? Does `progress.md` need updating? Does the affected sprint's per-sprint Progress section need to mirror a `progress.md` change?
 2. **Edit canonical wording first**, consumers second. The file that *owns* a renamed Deliverable / Locked Decision / module-tree entry is updated before any file that *references* it.
 3. **After the edit pass, grep the directory for the rejected wording** (`grep -rn '<old wording>' <plan-dir>`). Zero hits is the only acceptable result. One or more hits means a consumer was missed.
 
@@ -123,7 +125,7 @@ Walk these checks before sending the hand-off message. Each one has cost the sys
 - **Sprint-level Locked Decisions don't override overview-level ones.** They refine; they do not contradict.
 - **Module-tree drift:** every file an existing sprint commits to creating appears in `overview.md` § Module/Directory layout.
 - **`progress.md` ↔ per-sprint Progress** match exactly for every sprint.
-- **Status-log supersessions are paired with body edits.** A re-slice / supersession announced in the Status log actually shows in the affected sprint files.
+- **`status.md` supersessions are paired with body edits.** A re-slice / supersession announced in `status.md` actually shows in the affected sprint files.
 
 **Within-file quality:**
 - **Every new Decisions-log entry has rationale** — bold lead followed by a one-paragraph defense, not a bare bullet.
@@ -142,7 +144,7 @@ Fix what you find here, in this round.
 
 ### Step 7 — Append exactly one Status entry
 
-In `overview.md`'s Status log. Two clauses — what changed, then a `_Next:_` clause naming the recommended next-round focus:
+In **`status.md`** (the top-level plan-level Status file — not a section inside `overview.md`). Two clauses — what changed, then a `_Next:_` clause naming the recommended next-round focus:
 
 ```
 - **Round <n>**: <one-line summary>; <one phrase about what was superseded, if anything>. _Next:_ <one-line recommended focus, citing Open question IDs + tags + scope where relevant>.
@@ -162,9 +164,9 @@ Pick the `_Next:_` clause from your completeness assessment's "Recommended next-
 
 Cite supersessions explicitly (e.g., `R7 supersedes R5's contiguity-cache rule`; `re-sliced 06 into 06-resolve and 07-deduplicate; renumbered 07–10 → 08–11`).
 
-If the round materially changed a single sprint, append a sprint-scoped Status / Feedback-incorporated entry to that sprint file too. Status entries are append-only **for the round you are appending** — never edit *prior* entries to falsify what happened.
+If the round materially changed a single sprint, append a sprint-scoped Status / Feedback-incorporated entry to that sprint file too (in addition to the entry in `status.md`). Status entries are append-only **for the round you are appending** — never edit *prior* entries to falsify what happened.
 
-However, **compress older Status entries** that no longer carry weight. When you append the new round, walk both `overview.md`'s Status log and any sprint-level Status / Feedback-incorporated logs; condense entries whose `_Next:_` clause is long-finished (drop the `_Next:_`) or whose round-summary detail is no longer load-bearing because later rounds superseded it (collapse to `**Round <n>**: <one-clause summary>`). Keep the last 2–3 rounds in full at each scope. Never delete a round entry outright — round numbering must stay contiguous and grep-able. See [implementation-plan.md § 12](../trellis-impl-create/implementation-plan.md). Compression is *not* falsification: obsolete prose is dropped, the audit trail (round number + supersession link) is preserved.
+However, **compress older Status entries** that no longer carry weight. When you append the new round, walk both `status.md` and any sprint-level Status / Feedback-incorporated logs; condense entries whose `_Next:_` clause is long-finished (drop the `_Next:_`) or whose round-summary detail is no longer load-bearing because later rounds superseded it (collapse to `**Round <n>**: <one-clause summary>`). Keep the last 2–3 rounds in full at each scope. Never delete a round entry outright — round numbering must stay contiguous and grep-able. See [implementation-plan.md § "`status.md` anatomy"](../trellis-impl-create/implementation-plan.md). Compression is *not* falsification: obsolete prose is dropped, the audit trail (round number + supersession link) is preserved.
 
 ### Step 8 — Emit the completeness assessment to chat
 
@@ -172,7 +174,7 @@ This is **mandatory** at the end of every round, including small ones. The asses
 
 Implementation plans use a three-threshold model: pick the threshold that matches what this round was aiming at.
 
-- **`scaffold-complete`** — Round 1 has just landed. `overview.md` populated; one stub per roster entry; `progress.md` with a section per sprint; no `post-mortem.md`.
+- **`scaffold-complete`** — Round 1 has just landed. `overview.md` populated (no Decisions/Status sections); `decisions.md` exists (empty or R1 entries); `status.md` has the R1 entry; one stub per roster entry; `progress.md` with a section per sprint; no `post-mortem.md`.
 - **`sprint-NN-execution-ready`** — the round just locked Sprint NN. Its file has the populated Locked Decisions table (10–25 rows), Architecture notes, Public surface (when applicable), Implementation Steps (5–10) each with concrete Verification, Step Dependency Chart, Acceptance checklist. Cross-sprint coherence holds — Prerequisites match prior Deliverables, `progress.md` mirrors the new step list.
 - **`plan-complete`** — every sprint has cleared the execution-ready bar. Cross-sprint coherence holds across the whole directory.
 
@@ -233,7 +235,8 @@ Don't auto-progress to the next round. Each round is a discrete user-driven step
 ## Anti-patterns specific to iteration
 
 - **Don't skip the completeness assessment.** Mandatory every round.
-- **Don't skip the Status entry** when the round was small. Every round earns one entry.
+- **Don't skip the `status.md` entry** when the round was small. Every round earns one entry.
+- **Don't put a Decisions log or Status section inside `overview.md`.** Those live in `decisions.md` and `status.md` at the top level of the plan directory. Any "Decisions log" / "Status" heading inside `overview.md` is a planning bug — move the content out, then delete the heading.
 - **Don't skip the sanity-check pass.** It is the cheapest way to catch the cross-file inconsistencies your own edits introduced.
 - **Don't skip the post-edit grep** for multi-file edits. A consumer left referencing the rejected wording is silent drift.
 - **Don't append `(resolved)` tags** inside Open questions.

@@ -66,7 +66,9 @@ If the project lacks an obvious analogue for a section the spec describes (e.g.,
 
 ### The iteration model
 
-Like design plans, implementation plans are produced through repeated conversation rounds with a human collaborator. Each round resolves a small number of open questions, updates the affected files, and (where helpful) appends an entry to a decisions or status log. The agent should never try to "finish" the plan in one pass — the rounds keep cognitive load low and make trade-offs visible.
+Like design plans, implementation plans are produced through repeated conversation rounds with a human collaborator. Each round resolves a small number of open questions, updates the affected files, and (where helpful) appends an entry to the plan-level `decisions.md` / `status.md` files or to a sprint-scoped log inside a sprint file. The agent should never try to "finish" the plan in one pass — the rounds keep cognitive load low and make trade-offs visible.
+
+**Where the logs live.** Plan-level (cross-cutting) decisions and the round-by-round audit trail live in their **own top-level files** in the plan directory: `decisions.md` and `status.md`. They are **not** sections inside `overview.md`. Each sprint file may additionally carry its own sprint-scoped Decisions log section (for calls that affect only that sprint) and an optional sprint-scoped Status / Feedback-incorporated section (for round entries that materially changed just that sprint). The split is deliberate: `decisions.md` and `status.md` are the plan's single-page indexes for "what got decided across the whole feature" and "how did this plan get here"; per-sprint logs are the local record inside the sprint that owns them.
 
 A round generally goes:
 
@@ -75,12 +77,12 @@ A round generally goes:
 3. **Surface alternatives clearly** to the user — present 2–3 viable options for each question with trade-offs, recommend one, and let the user pick or redirect.
 4. **Update the affected files** for each resolution:
    - Rewrite the affected sprint section (or overview section) to reflect the chosen approach.
-   - Add a tagged bullet to the relevant **Decisions log** (overview-level for cross-cutting calls; sprint-level for sprint-specific calls).
+   - Add a tagged bullet to the relevant **Decisions log** — cross-cutting calls go in the plan-level **`decisions.md`**; sprint-specific calls go in the affected sprint file's Decisions log section.
    - Remove the resolved entry from **Open questions**.
    - Add any newly-surfaced sub-questions to Open questions for next round.
 5. **Re-shape sprint boundaries when warranted.** A resolution may show that a sprint is too large (split it), too small (fold it into a neighbor), or sequenced wrong (swap order). Sprint files are renamed and the index updated; the progress file is regenerated.
 6. **Purge obsolete prose.** When a decision invalidates earlier wording, delete the old wording — don't leave both versions side-by-side.
-7. **Append a Status entry** for the round summarizing what changed.
+7. **Append a Status entry** for the round summarizing what changed — to the plan-level **`status.md`**, and (when a single sprint was materially changed) optionally to that sprint file's sprint-scoped Status / Feedback-incorporated section.
 8. **Ensure internal consistency.** Rewriting one sprint may leak inconsistency into adjacent sprints (a new dependency, a deferred concern, a renamed helper). Either fix the consequence in the same round or add a note to Open questions for next round.
 9. **Emit a completeness assessment to chat** at the end of the round (see § "Round-end completeness assessment"). This is the agent's recommendation on how close the directory is to "the next sprint can be picked up cold and shipped," what's still load-bearing-open, and which nits the user may want to resolve before handing the plan off to an implementer.
 
@@ -89,10 +91,11 @@ A round generally goes:
 Round 1 is initiated by a human pointing the agent at a design plan and (usually) sketching the high-level slicing they have in mind. The first round produces the skeleton, not the fully-detailed plan:
 
 - The implementation plan **directory** is created.
-- `overview.md` is drafted — title, framing, link back to the source design plan, philosophy, locked feature-wide decisions, sprint roster (titles + one-line outcomes), dependency graph.
+- `overview.md` is drafted — title, framing, link back to the source design plan, philosophy, locked feature-wide decisions, sprint roster (titles + one-line outcomes), dependency graph. **No Decisions log or Status section inside `overview.md`** — those live in `decisions.md` and `status.md`.
+- `decisions.md` is initialized — usually empty, or with `(R1)`-tagged entries capturing the slicing decisions agreed in Round 1.
+- `status.md` is initialized with a single Round 1 entry: `**Round 1**: scaffolding + sprint roster + open questions enumerated. _Next:_ <recommended Round 2 focus>.`
 - One stub file per sprint is created (`01-<topic>.md`, `02-<topic>.md`, …) with at minimum the Goal, Prerequisites, and an initial Open Questions list scoped to that sprint.
 - `progress.md` is initialized with a master checklist where every sprint shows its sprint-level title and (if known) its tentative steps. Each item starts unchecked.
-- An overview-level `Status` entry says "Round 1: scaffolding + sprint roster + open questions enumerated."
 
 Detailed step breakdowns within each sprint mostly come in later rounds. Don't pre-populate them with assumptions; surface unresolved shape as Open questions.
 
@@ -114,8 +117,8 @@ A sprint is "ready to hand off" when a junior engineer could pick it up cold and
 When a later round invalidates a prior decision (cross-sprint or within a sprint):
 
 1. Update the affected file(s) to reflect the new design.
-2. Either edit the existing Decisions-log bullet (preserving its round tag) or add a new one tagged with the current round.
-3. Note the supersession explicitly in the relevant Status log: "Round 5: re-sliced Sprint 06; cross-cutting helper now lands in Sprint 04 instead. R3's helper-in-Sprint-06 decision superseded."
+2. Either edit the existing Decisions-log bullet (preserving its round tag) or add a new one tagged with the current round. Cross-cutting calls live in `decisions.md`; sprint-scoped calls live in the affected sprint file's Decisions log section.
+3. Note the supersession explicitly in `status.md`: "Round 5: re-sliced Sprint 06; cross-cutting helper now lands in Sprint 04 instead. R3's helper-in-Sprint-06 decision superseded." If the supersession is sprint-scoped and that sprint has its own Status section, also note it there.
 4. **Purge stale wording** from all files where it appears. Old paragraphs left in place become land mines.
 5. **Update `progress.md`** if step ordering or step count changed.
 
@@ -181,6 +184,8 @@ The implementation plan lives in a single directory. By convention, the director
 ```
 .plans/<feature-name>/
 ├── overview.md
+├── decisions.md
+├── status.md
 ├── progress.md
 ├── post-mortem.md         # created lazily; first appears when the first sprint ships
 ├── 01-<topic>.md
@@ -190,14 +195,16 @@ The implementation plan lives in a single directory. By convention, the director
 ```
 
 Rules:
-- `overview.md` is required. It's the entry point — `progress.md` and every sprint file links back to it.
+- `overview.md` is required. It's the entry point — `decisions.md`, `status.md`, `progress.md`, and every sprint file links back to it. **`overview.md` does not contain a Decisions log or a Status section** — those live in `decisions.md` and `status.md` respectively. This is non-negotiable: a Decisions log inside `overview.md` is a planning bug.
+- `decisions.md` is required. It is the plan-level (cross-cutting) Decisions log — the single page a returning collaborator scans to recover "what got decided across the whole feature." Sprint-scoped Decisions logs continue to live inside their sprint files; `decisions.md` holds only the cross-cutting calls. See "`decisions.md` anatomy" for the format.
+- `status.md` is required. It is the plan-level round-by-round audit trail — the doc's "git log." Sprint-scoped Status / Feedback-incorporated entries continue to live inside their sprint files; `status.md` holds the plan-wide narrative. See "`status.md` anatomy" for the format.
 - `progress.md` is required. It is the master checklist that humans scan to see "what's done."
 - `post-mortem.md` is created the first time a sprint's final step is checked off — not at scaffold time. It accrues a distilled, sprint-keyed entry per shipped sprint. See "`post-mortem.md` anatomy" for the format.
 - Sprint files are zero-padded numerically prefixed (`01-`, `02-`, …) so directory order matches execution order. Re-numbering on a re-slice is fine.
 - Sprint file names are `<NN>-<short-kebab-topic>.md` — short enough that the index table reads cleanly, descriptive enough that a `git log` line is meaningful.
 - One file per sprint. Don't split a sprint across two files; if a sprint is too large to fit comfortably in one file, that's a re-slice signal.
 
-> **Note on legacy directories.** Earlier implementation plans in this repo (and the ParentHop precedents) named the overview file `00-overview.md`. Going forward the canonical name is `overview.md` — the `00-` prefix conflated the entry-point document with the executable sprint sequence. Existing directories may keep their `00-overview.md` for stability, but new plans use `overview.md`.
+> **Note on legacy directories.** Earlier implementation plans in this repo (and the ParentHop precedents) named the overview file `00-overview.md`, and kept the Decisions log + Status sections inside `overview.md`. Going forward the canonical names are `overview.md`, `decisions.md`, and `status.md` as separate top-level files. Existing directories may keep their legacy shape for stability, but new plans follow the split layout.
 
 ---
 
@@ -368,9 +375,41 @@ A numbered list of items not yet decided across the plan as a whole. Each entry 
 
 When a round resolves an entry, it **moves to** the Decisions log; it does not stay in Open questions with a "(resolved)" tag.
 
-### 11. Decisions log
+### 11. What this plan does *not* try to do
 
-Bulleted list of cross-cutting decisions made during prior rounds, each tagged with the round number:
+A short bulleted list at the overview level so individual sprint "Out of scope" sections stay short. Explicitly forward-looking: things the design plan covers but this implementation plan defers.
+
+### 12. How to read each sprint
+
+A one-paragraph summary of the sprint anatomy and a pointer at "the design plan is the source of truth on any conflict." Also note where the logs live: cross-cutting Decisions and the round-by-round Status are in `decisions.md` and `status.md`; sprint-scoped decisions and (optional) sprint-scoped Status entries are inside the sprint file itself.
+
+> **`overview.md` does not contain a Decisions log or a Status section.** Those are top-level files in the plan directory (`decisions.md`, `status.md`) — see the next two sections for their anatomy.
+
+---
+
+## `decisions.md` anatomy
+
+`decisions.md` is the plan-level (cross-cutting) Decisions log. It is its own top-level file in the plan directory — **not** a section inside `overview.md`. A returning collaborator opens `decisions.md` to recover "what got decided across the whole feature, and when." Sprint-scoped Decisions logs continue to live inside their sprint files; `decisions.md` holds only cross-cutting calls (the calls every sprint would otherwise re-litigate).
+
+Skeleton:
+
+```markdown
+# <Feature> — Decisions
+
+> Part of the [<Feature> Implementation Plan](./overview.md).
+>
+> Cross-cutting decisions only. Sprint-scoped decisions live in the relevant sprint file's Decisions log section.
+
+- **<Decision lead in bold>.** <Brief restatement / rationale.> (R<n>)
+- **<Decision lead in bold>.** <…> (R<n>)
+- …
+```
+
+Rules:
+
+- One bullet per cross-cutting decision. Each bullet **leads with a bold phrase** that names the call, followed by the rationale, followed by the round tag `(R<n>)`.
+- Round tags are required on every bullet. The tag is the audit trail's anchor.
+- Concrete examples:
 
 ```
 - **Sprint roster sliced into 10 PR-sized units.** (R1)
@@ -378,11 +417,38 @@ Bulleted list of cross-cutting decisions made during prior rounds, each tagged w
 - **Push fan-out is post-commit and best-effort; outbox deferred.** (R5)
 ```
 
-The same compression discipline applies at both the overview level and every sprint's local Decisions log: when a later round supersedes a bullet, condense the older entry to its bold lead + round tag + supersession pointer (`- **<lead>.** Superseded by R<m>. (R<n>)`) and drop the rationale paragraph. Decisions that are still actively load-bearing keep their full defense regardless of age; obsolete ones do not. Keep the last 2–3 rounds in full. The audit trail (round number + supersession link) survives compression; the obsolete prose does not.
+- **`decisions.md` does not hold sprint-scoped calls.** A decision that only affects one sprint stays in that sprint file's Decisions log. If a sprint-scoped decision later becomes cross-cutting (a second sprint takes a dependency on it), promote it to `decisions.md` and add a note in the new round's `status.md` entry. Don't duplicate.
+- **Compression discipline.** When a later round supersedes a bullet, condense the older entry to its bold lead + round tag + supersession pointer (`- **<lead>.** Superseded by R<m>. (R<n>)`) and drop the rationale paragraph. The audit trail (round number + supersession link) survives compression; the obsolete prose does not. Keep the last 2–3 rounds in full; keep any still-actively-load-bearing entry in full regardless of age. The same compression discipline applies to every sprint's local Decisions log section.
+- **Don't add narrative connective tissue** between bullets. `decisions.md` is a flat list, not an essay.
 
-### 12. Status
+The compression rule and the round-tag rule apply identically inside any sprint file's sprint-scoped Decisions log section.
 
-Round-by-round audit trail at the overview level. Each entry has two clauses — what changed, and a `_Next:_` clause naming the recommended next-round focus:
+---
+
+## `status.md` anatomy
+
+`status.md` is the plan-level round-by-round audit trail — the doc's "git log." It is its own top-level file in the plan directory — **not** a section inside `overview.md`. A user resuming the plan via `trellis-impl-iterate` reads the latest entry's `_Next:_` clause to recover where to pick up. Sprint files may additionally carry a sprint-scoped Status / Feedback-incorporated section for round entries that materially changed just that sprint; `status.md` holds the plan-wide narrative.
+
+Skeleton:
+
+```markdown
+# <Feature> — Status
+
+> Part of the [<Feature> Implementation Plan](./overview.md).
+>
+> Plan-level round-by-round audit trail. Sprint-scoped Status / Feedback-incorporated entries live in the relevant sprint file when a round materially changes a single sprint.
+
+- **Round 1**: <summary>. _Next:_ <one-line recommended focus for next round, citing Open question IDs + tags + scope where relevant>.
+- **Round 2**: <…>. _Next:_ <…>.
+- …
+```
+
+Each entry has two clauses:
+
+1. **What changed.** Summary of resolutions / re-slices / supersessions in this round. Cite supersessions explicitly (`R5 supersedes R3's helper-in-Sprint-06 decision`).
+2. **`_Next:_` clause** — a one-line italic tail naming the recommended next-round focus. Cite Open question IDs + tags + scope when relevant (`overview Q4 [blocks-v1]`, `Sprint 03 Q2 [blocks-impl]`). This persists the between-rounds recommendation into the doc itself, so a user resuming via `trellis-impl-iterate` recovers the prior recommendation without depending on chat history. When the plan is complete, the `_Next:_` clause is `hand off to implementation` (or `run trellis-impl-review first`).
+
+Examples:
 
 ```
 - **Round 1**: scaffolding + sprint roster + open questions enumerated. _Next:_ lock Sprint 01 to execution-ready.
@@ -390,20 +456,13 @@ Round-by-round audit trail at the overview level. Each entry has two clauses —
 - **Round 3**: Sprint 06 split into 06-resolve and 07-deduplicate; cron cadence locked. _Next:_ resolve the worker-idempotency-key shape (overview Q11 [blocks-v1]) before touching Sprint 07.
 ```
 
-Clause discipline:
+Rules:
 
-1. **What changed.** Summary of resolutions / re-slices / supersessions in this round. Cite supersessions explicitly (`R5 supersedes R3's helper-in-Sprint-06 decision`).
-2. **`_Next:_` clause** — a one-line italic tail naming the recommended next-round focus. Cite Open question IDs + tags + scope when relevant (`overview Q4 [blocks-v1]`, `Sprint 03 Q2 [blocks-impl]`). This persists the between-rounds recommendation into the doc itself, so a user resuming via `trellis-impl-iterate` recovers the prior recommendation without depending on chat history. When the plan is complete, the `_Next:_` clause is `hand off to implementation` (or `run trellis-impl-review first`).
-
-**Compressing older Status entries.** Like the Decisions log, the Status log grows monotonically as rounds accumulate; without active pruning, a long plan's overview log becomes unreadable. When you append a new round, also walk the older entries and condense any whose detail no longer carries weight: rounds whose `_Next:_` clause is long-finished drop the clause entirely; rounds whose summary detail is no longer load-bearing (the decisions they narrate were themselves superseded by later rounds) collapse to a one-line summary `**Round <n>**: <one-clause summary>`. Keep the last 2–3 rounds in full, and never delete a round outright — the numbering must stay contiguous and grep-able. The same applies to any per-sprint Status / Feedback-incorporated log inside a sprint file.
-
-### 13. What this plan does *not* try to do
-
-A short bulleted list at the overview level so individual sprint "Out of scope" sections stay short. Explicitly forward-looking: things the design plan covers but this implementation plan defers.
-
-### 14. How to read each sprint
-
-A one-paragraph summary of the sprint anatomy and a pointer at "the design plan is the source of truth on any conflict."
+- One entry per planning round. Round numbering is contiguous and grep-able — **never delete a round entry outright**, even when compressing.
+- The round counter is plan-level (incremented in `status.md`). Sprint-scoped Status entries reuse the same round number; they don't run their own counter.
+- Status entries are append-only **for the round you are appending** — never edit *prior* entries to falsify what happened.
+- **Compressing older entries.** Like `decisions.md`, `status.md` grows monotonically as rounds accumulate; without active pruning, a long plan's log becomes unreadable. When you append a new round, also walk the older entries and condense any whose detail no longer carries weight: rounds whose `_Next:_` clause is long-finished drop the clause entirely; rounds whose summary detail is no longer load-bearing (the decisions they narrate were themselves superseded by later rounds) collapse to a one-line summary `**Round <n>**: <one-clause summary>`. Keep the last 2–3 rounds in full. Never delete a round outright. The same compression rule applies to every sprint's local Status section.
+- **Sprint-scoped Status entries.** When a round materially changes a single sprint, append a sprint-scoped entry to that sprint file's Status / Feedback-incorporated section *in addition to* the entry in `status.md`. The sprint-scoped entry can be terser — `status.md`'s entry carries the cross-cutting narrative. For a *shipped* sprint, leave its older Status / Deviations entries alone — they are part of the historical record of what shipped and are no longer eligible for compression by a planning pass.
 
 ---
 
@@ -807,14 +866,14 @@ export const measurementTypes = schema.table('measurement_types', {
 
 ### Continuing an existing implementation plan
 
-1. **Read the entire directory, end to end.** `overview.md`, `progress.md`, every sprint file. Identify Open questions (overview-level + sprint-level), recent Decisions log entries, and the most recent Status round.
+1. **Read the entire directory, end to end.** `overview.md`, `decisions.md`, `status.md`, `progress.md`, every sprint file, and `post-mortem.md` if it exists. Identify Open questions (overview-level + sprint-level), recent `decisions.md` entries (plus sprint-scoped Decisions logs), and the most recent `status.md` round.
 2. **Pick 1–3 questions or 1 sprint** to focus this round. Prefer questions whose resolutions are reasonably independent.
 3. **For each, frame the choice** for the user: 2–3 viable options with trade-offs, your recommendation, and one sentence on what gets unblocked by the answer.
 4. **After the user answers**, update the affected files:
    - Sprint body gets the new design (purge the old wording).
-   - Decisions log gets a tagged bullet (overview-level or sprint-level as appropriate).
+   - Decisions log gets a tagged bullet — cross-cutting calls in `decisions.md`; sprint-scoped calls in the affected sprint file's Decisions log section.
    - Open questions loses the resolved entry; gains any newly-surfaced sub-questions.
-   - Status log gets a new numbered entry.
+   - `status.md` gets a new numbered entry (plus, optionally, a sprint-scoped Status entry inside the affected sprint file).
    - `progress.md` is updated if step ordering or step count changed.
 5. **Re-read the affected sprint(s)** to catch any wording from earlier rounds that the resolution silently invalidated. Cross-check against the overview's locked-decisions table — sprint-level decisions never override overview-level ones.
 
@@ -826,7 +885,7 @@ The bootstrap workflow — taking a finished design plan and producing the initi
 
 - **Surface the analogues.** Find similar implementation plans in the repo (or the precedents under `plans/`) and present how they resolved the same shape question. Borrow generously; explain what you're borrowing.
 - **Default to v1 simplicity.** When the user is genuinely undecided, prefer the smallest answer that doesn't paint into a corner — and note the alternative as deferred.
-- **Document the punt.** "Deferred — revisit when concrete demand emerges" is a legitimate resolution. Tag it in the Decisions log so a future round can reopen with proper context.
+- **Document the punt.** "Deferred — revisit when concrete demand emerges" is a legitimate resolution. Tag it in the appropriate Decisions log (`decisions.md` for cross-cutting; the sprint file's Decisions log for sprint-scoped) so a future round can reopen with proper context.
 
 ### When sprint slicing changes mid-stream
 
@@ -835,7 +894,7 @@ Re-slicing is normal. When it happens:
 - Update `overview.md`'s sprint roster, dependency graph, and any rationale paragraphs that reference the old shape.
 - Rename / split / fold sprint files. Renumber if the directory ordering would otherwise lie about execution order.
 - Update `progress.md` to reflect the new structure.
-- Add a Status entry: "Round 4: re-sliced 06 into 06-resolve-type and 07-deduplicate; re-numbered 07–10 → 08–11. R3's combined-worker decision superseded."
+- Add a Status entry **to `status.md`**: "Round 4: re-sliced 06 into 06-resolve-type and 07-deduplicate; re-numbered 07–10 → 08–11. R3's combined-worker decision superseded."
 - Cross-references in adjacent sprints get updated in the same round.
 
 ---
@@ -857,7 +916,9 @@ There are three different "complete enough" thresholds; the assessment picks the
 
 **Scaffold-complete** — Round 1 has just landed:
 
-- `overview.md` is populated per the spec — title, framing, philosophy, architectural invariants, module/directory layout, cross-sprint conventions, sprint organization rationale, sprint roster (with one-line outcomes), dependency graph, feature-wide locked decisions table, out-of-scope across all sprints, open questions, decisions log (start empty or with R1 entries), Status (`Round 1: scaffolding…`), what this plan does *not* try to do, how to read each sprint.
+- `overview.md` is populated per the spec — title, framing, philosophy, architectural invariants, module/directory layout, cross-sprint conventions, sprint organization rationale, sprint roster (with one-line outcomes), dependency graph, feature-wide locked decisions table, out-of-scope across all sprints, open questions, what this plan does *not* try to do, how to read each sprint. **No Decisions log or Status section inside `overview.md`.**
+- `decisions.md` exists at the top level of the plan directory — empty, or with `(R1)`-tagged entries capturing slicing decisions agreed in Round 1.
+- `status.md` exists at the top level of the plan directory with a single entry: `**Round 1**: scaffolding + sprint roster + open questions enumerated. _Next:_ …`.
 - One stub sprint file per roster entry, each with at least Goal, Prerequisites, Deliverables (best-effort first cut), Out of scope (forward-linked to owner sprints), and Open questions.
 - `progress.md` has one section per sprint, no step bullets yet.
 - No `post-mortem.md` (it's created lazily when the first sprint ships).
@@ -880,7 +941,7 @@ There are three different "complete enough" thresholds; the assessment picks the
 - The cross-sprint coherence checks (overview locked decisions vs. sprint locked decisions; module-tree drift; convention drift; invariant honoring) all pass.
 - `progress.md` reflects the full step structure.
 - Open Questions at every scope are empty *or* contain only items explicitly deferred with rationale.
-- Decisions log and Status log are coherent across `overview.md` and every sprint file.
+- `decisions.md` and `status.md` are coherent with every sprint file's sprint-scoped Decisions / Status sections — round numbering consistent, supersessions paired with body edits, no orphaned references.
 - Tone and conventions clean — no marketing words, no design-level rationale leaking into sprints, no implementation-spec specifics leaking up to the overview.
 
 If the round didn't aim at a specific sprint (e.g., it was a feedback-incorporation round across many files), grade against whichever threshold the directory's overall state best matches.
@@ -940,7 +1001,7 @@ A sprint is "execution-ready" when a junior engineer can:
 
 If the engineer hits a question the sprint doc doesn't answer:
 
-- **Easy answer**: it's in `overview.md`'s locked-decisions table or in the design plan. Resolve and continue.
+- **Easy answer**: it's in `overview.md`'s locked-decisions table, `decisions.md`, or the design plan. Resolve and continue.
 - **Mid-difficulty**: it's a sprint-level call the planning rounds missed. Surface to the planning collaborator (the user / the senior engineer) to add a sprint-level locked decision. Don't make the call inside a step.
 - **Hard answer**: it's a design-level call the design plan didn't make. Stop the sprint, log the question into the design plan's Open questions, escalate. Don't re-decide architecture inside an implementation plan.
 
@@ -1049,15 +1110,11 @@ The slices are not equal in size. They are equal in shippability.
 1. **<title>.** <question + state of debate + indicative direction or "deferred until X.">
 2. …
 
-## Decisions log
-
-- **<lead in bold>.** <brief restatement.> (R<n>)
-- …
-
-## Status
-
-- **Round 1**: scaffolding + sprint roster + open questions enumerated. _Next:_ <one-line recommended focus, citing Open question IDs + tags + scope where relevant>.
-- **Round 2**: … _Next:_ <…>.
+<!--
+  No Decisions log or Status section here.
+  Plan-level decisions live in ./decisions.md.
+  Plan-level round-by-round audit trail lives in ./status.md.
+-->
 
 ## What this plan does *not* try to do
 
@@ -1196,6 +1253,34 @@ Every sprint follows the same skeleton: Goal → Prerequisites → Deliverables 
 - …
 ```
 
+### `decisions.md`
+
+```markdown
+# <Feature> — Decisions
+
+> Part of the [<Feature> Implementation Plan](./overview.md).
+>
+> Cross-cutting decisions only. Sprint-scoped decisions live in the relevant sprint file's Decisions log section.
+
+- **<Decision lead in bold>.** <Brief restatement / rationale.> (R<n>)
+- **<Decision lead in bold>.** <…> (R<n>)
+- …
+```
+
+### `status.md`
+
+```markdown
+# <Feature> — Status
+
+> Part of the [<Feature> Implementation Plan](./overview.md).
+>
+> Plan-level round-by-round audit trail. Sprint-scoped Status / Feedback-incorporated entries live in the relevant sprint file when a round materially changes a single sprint.
+
+- **Round 1**: scaffolding + sprint roster + open questions enumerated. _Next:_ <one-line recommended focus, citing Open question IDs + tags + scope where relevant>.
+- **Round 2**: … _Next:_ <…>.
+- …
+```
+
 ### `post-mortem.md`
 
 Created lazily — the first sprint to ship creates this file in the same PR that checks off its final step. Each subsequent shipped sprint appends a new section.
@@ -1222,10 +1307,10 @@ Created lazily — the first sprint to ship creates this file in the same PR tha
 
 - **Add an "Architecture note"** if a reader could plausibly ask "why this shape?"
 - **Promote a "Subtle bug:" line** above prose whenever an implementer would otherwise stumble.
-- **Move an Open question to Decisions log** the moment it resolves; never mark "(resolved)" in place.
+- **Move an Open question to the Decisions log** the moment it resolves; never mark "(resolved)" in place. Cross-cutting calls land in `decisions.md`; sprint-scoped calls land in the affected sprint file's Decisions log section.
 - **Tag every Decisions-log bullet with `(R<n>)`** so the audit trail is intact.
-- **Update Status every round**, even if the round was small.
-- **Compress older log entries** that no longer carry weight — superseded Decisions-log bullets keep their tag and supersession pointer but drop the rationale paragraph; ancient Status rounds whose `_Next:_` is long-finished collapse to a one-line summary. Keep the last 2–3 rounds and any still-load-bearing entry in full. Applies to overview-level and per-sprint logs alike. See § 11 and § 12.
+- **Update `status.md` every round**, even if the round was small. When a single sprint was materially changed, also append a sprint-scoped Status entry to that sprint file.
+- **Compress older log entries** that no longer carry weight — superseded Decisions-log bullets keep their tag and supersession pointer but drop the rationale paragraph; ancient Status rounds whose `_Next:_` is long-finished collapse to a one-line summary. Keep the last 2–3 rounds and any still-load-bearing entry in full. Applies to `decisions.md`, `status.md`, and every sprint file's local logs alike. See "`decisions.md` anatomy" and "`status.md` anatomy."
 - **Update `progress.md` whenever step structure changes** — a re-sliced sprint regenerates the master checklist in the same round.
 - **Distill the sprint's Post Mortem into `post-mortem.md`** in the same PR that checks off the sprint's final step — creating the file if it doesn't yet exist. An empty entry (`_No post-mortem-worthy observations._`) is fine; a missing entry is not.
 - **Purge stale wording** when a round supersedes it; trust the Decisions/Status logs to carry the audit trail.

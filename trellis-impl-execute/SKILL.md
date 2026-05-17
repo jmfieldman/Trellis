@@ -103,7 +103,7 @@ The file must clear **both** a structural and a substance bar before you dispatc
 
 If a step in range fails substance, stop and tell the user the step isn't execution-ready; route them to `trellis-impl-iterate` to lock it before re-invoking this skill.
 
-Locate the implementation-plan **directory** by taking the parent of `$0`. Confirm `overview.md` and `progress.md` exist in that directory; if either is missing, warn the user (do not stop — some plans may be partial — but flag it so the subagent knows).
+Locate the implementation-plan **directory** by taking the parent of `$0`. Confirm `overview.md` and `progress.md` exist in that directory; if either is missing, warn the user (do not stop — some plans may be partial — but flag it so the subagent knows). Also note whether `decisions.md` and `status.md` exist — newer plans split the plan-level Decisions log and Status log into their own top-level files; legacy plans kept those sections inside `overview.md`. The executor doesn't typically need to read either, but their existence indicates which layout the plan is on.
 
 ### 4. Identify the steps in range
 

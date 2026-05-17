@@ -26,10 +26,10 @@ If either path is not provided, ask for it and stop.
 Before producing any review output, read these in order:
 
 1. **The implementation-plan authoring guide** at [`../trellis-impl-create/implementation-plan.md`](../trellis-impl-create/implementation-plan.md). This is your rubric — the directory you are reviewing was meant to be produced under this guide. Internalize:
-   - The required and optional document sections for `overview.md`, sprint files, `progress.md`, and `post-mortem.md`.
+   - The required and optional document sections for `overview.md`, `decisions.md`, `status.md`, sprint files, `progress.md`, and `post-mortem.md`. **`decisions.md` and `status.md` are top-level files in the plan directory — not sections inside `overview.md`.** Any plan that still keeps a Decisions log or Status section inside `overview.md` is operating under the legacy layout; flag it.
    - The "architecture is inherited, not prescribed" rule — you are reviewing how well the plan adapts to the project's actual conventions, not against a generic template.
    - The sizing heuristics for sprint slicing (5–12 sprints, 5–10 steps/sprint, archetypes, fold/split signals).
-   - The supersession discipline (purge stale wording; tag decisions by round; status log calls out supersessions explicitly).
+   - The supersession discipline (purge stale wording; tag decisions by round; `status.md` calls out supersessions explicitly).
    - The full list of anti-patterns.
    - The tone / voice conventions.
 
@@ -38,9 +38,11 @@ Before producing any review output, read these in order:
 3. **The design plan** the implementation plan cites as its source. Follow the link in `overview.md`'s framing block. Read the design plan end-to-end. You are checking whether the implementation plan honors the design plan's foundational decisions and resolves only what the design plan left to implementation. A sprint that contradicts a design-plan decision is a critical finding.
 
 4. **The implementation plan under review** (path provided as argument). Read every file in the directory, top to bottom, in directory order:
-   - `overview.md` first — internalize the philosophy, locked decisions, sprint roster, dependency graph, open questions, status log.
+   - `overview.md` first — internalize the philosophy, feature-wide locked decisions, sprint roster, dependency graph, overview-level open questions. (No Decisions log or Status section is in `overview.md` — those live in `decisions.md` and `status.md`. If you find a Decisions log or Status section inside `overview.md`, flag it as a layout violation.)
+   - `decisions.md` — the plan-level (cross-cutting) Decisions log.
+   - `status.md` — the plan-level round-by-round audit trail.
    - `progress.md` — note which steps are checked off (some sprints may have shipped).
-   - Each sprint file in numeric order — `01-*.md`, `02-*.md`, etc. As you read each, take inventory of: Goal, Prerequisites, Deliverables, Out of scope, Locked decisions, Architecture notes, Public surface, Steps, Step Dependency Chart, Acceptance checklist, Open questions, Status / Deviations.
+   - Each sprint file in numeric order — `01-*.md`, `02-*.md`, etc. As you read each, take inventory of: Goal, Prerequisites, Deliverables, Out of scope, Locked decisions, Architecture notes, Public surface, Steps, Step Dependency Chart, Acceptance checklist, Open questions, sprint-scoped Decisions log, sprint-scoped Status / Feedback-incorporated / Deviations.
    - `post-mortem.md` if it exists.
    - Maintain a running cross-sprint mental table: what each sprint promises to deliver, what each sprint claims as prerequisites, what's marked out-of-scope-and-deferred-to-which-sprint, and which open questions block which sprints.
 
@@ -71,9 +73,9 @@ The implementation plan is a *system* of files. Most planning failures hide in t
 - **Architectural invariants honored everywhere.** For each invariant in `overview.md`'s "Architectural invariants the sprints uphold" list, walk the sprints and check: does any sprint appear to violate it (e.g., a sprint that wraps a peer-service call inside a transaction when the invariant forbids it; a sprint that adds a cross-schema FK when the invariant forbids it)? Does each sprint that touches the invariant restate the relevant verification in its Acceptance checklist?
 - **Sprint roster completeness.** Compare the sprint roster table in `overview.md` against the actual files in the directory. Every roster row points at a real file; every file is in the roster; numbering matches order; titles match.
 - **`progress.md` vs. per-sprint Progress lockstep.** The master `progress.md` and each sprint file's per-sprint Progress section should be identical for that sprint's slice. Flag any drift: a step that exists in one but not the other, a step ordering mismatch, a `[x]` / `[ ]` inconsistency.
-- **Status-log supersessions are paired with body edits.** When `overview.md`'s Status log mentions a re-slice or a supersession ("R5: Sprint 06 split into 06-resolve and 07-deduplicate"), confirm the sprint files actually reflect the new shape — old wording purged, new files in place, dependent sprints' Prerequisites updated, `progress.md` regenerated.
+- **`status.md` supersessions are paired with body edits.** When `status.md` mentions a re-slice or a supersession ("R5: Sprint 06 split into 06-resolve and 07-deduplicate"), confirm the sprint files actually reflect the new shape — old wording purged, new files in place, dependent sprints' Prerequisites updated, `progress.md` regenerated.
 - **Open-question ownership.** Each open question (overview-level + sprint-level) should name which sprint(s) it blocks. Flag open questions that cite a sprint number that doesn't exist, or that block a sprint with no acknowledgment in that sprint's own Open questions section.
-- **Round numbering coherence.** Decisions-log entries across `overview.md` and sprint files should use a coherent round-numbering scheme. Flag conflicts (Sprint 03 has an `(R6)` entry but the overview never reached Round 6; Sprint 05 has `(R2)` and `(R4)` but skipped `(R3)` despite a Status entry for that round implying activity).
+- **Round numbering coherence.** Decisions-log entries across `decisions.md` and sprint files should use a coherent round-numbering scheme. The round counter is plan-level (incremented in `status.md`). Flag conflicts (Sprint 03 has an `(R6)` entry but `status.md` never reached Round 6; Sprint 05 has `(R2)` and `(R4)` but skipped `(R3)` despite an entry for that round implying activity).
 - **Acceptance checklist coverage.** Each sprint's Acceptance checklist should cover (a) every documented failure mode in the Public surface, (b) every architectural invariant that sprint touched, (c) every "Subtle bug" gotcha called out in the steps, and (d) the cross-sprint convention items that apply (build / type / test / lint green; spec sync done; tests at the right layer). Flag sprints whose checklist meaningfully under-reports the surface they ship.
 
 ### 2. Coverage gaps
@@ -138,9 +140,9 @@ This is the highest-leverage substance category for any single sprint. Look hard
 
 ### 7. Authoring-guide / process compliance
 
-- **Decisions log discipline.** Every entry tagged with `(R<n>)`? Each leads with a bold phrase naming the call? Resolved questions actually moved here from Open Questions? `overview.md`'s log holds cross-cutting decisions and each sprint's log holds sprint-scoped ones — flag log-content that's mis-located.
+- **Decisions log discipline.** Every entry tagged with `(R<n>)`? Each leads with a bold phrase naming the call? Resolved questions actually moved here from Open Questions? **`decisions.md` holds cross-cutting decisions and each sprint file's Decisions log section holds sprint-scoped ones** — flag log-content that's mis-located. Flag any Decisions log section inside `overview.md` (layout violation: it should be a top-level `decisions.md` file).
 - **Open questions hygiene.** Anything marked "(resolved)" in place instead of moved to Decisions log? Each entry has an indicative direction or an explicit "deferred until X"? Each entry names the sprint(s) it blocks?
-- **Status / Rounds log.** Updated for the most recent round? Supersessions called out explicitly (`R5: re-sliced Sprint 06; cross-cutting helper now lands in Sprint 04 instead. R3's helper-in-Sprint-06 decision superseded`)?
+- **`status.md` discipline.** Updated for the most recent round? Supersessions called out explicitly (`R5: re-sliced Sprint 06; cross-cutting helper now lands in Sprint 04 instead. R3's helper-in-Sprint-06 decision superseded`)? Round numbering contiguous? Latest entry's `_Next:_` clause present and specific? Flag any Status section inside `overview.md` (layout violation: it should be a top-level `status.md` file).
 - **`post-mortem.md` discipline.** If any sprint has shipped (its final step is `[x]` in `progress.md`), `post-mortem.md` should exist and have a section for that sprint. If `post-mortem.md` exists during scaffold-only state, that's a violation. If a shipped sprint's section is missing, flag it. If sections appear out of sprint order, flag it.
 - **Title & framing block.** `overview.md` links back to the source design plan? Each sprint links back to `overview.md`?
 - **Cross-references list.** Annotated with what each link contributes, or a bare list?
@@ -287,7 +289,7 @@ This summary is a digest of what is already in the review document, not new cont
 - **Cite specific text.** Quote the file + section + line. A reviewer who can't point at the text isn't really reading. When a finding spans multiple files, cite both.
 - **Calibrated severity.** Not everything is critical. Use the section structure to grade. A typo is a nit; a sprint contradicting an overview-level locked decision is a high-level concern. If you find yourself dropping the same item in two sections, pick the more severe one.
 - **No judgment on the author.** Frame issues as properties of the document, not properties of the person who wrote it.
-- **Recommend, but don't unilaterally resolve.** When the resolution is a judgment call, surface the options *and* name the one you'd pick with your reasoning — don't stop at "the author should decide." What you must not do is *act* on the call: you don't rewrite the plan, edit a Decisions log, re-slice the roster, or delete an Open question. The recommendation is advice the downstream step can take or override; the edit is not yours to make. Reserve a bare "this needs a human" for genuinely balanced calls, and when you use it, explain why the options are roughly equal.
+- **Recommend, but don't unilaterally resolve.** When the resolution is a judgment call, surface the options *and* name the one you'd pick with your reasoning — don't stop at "the author should decide." What you must not do is *act* on the call: you don't rewrite the plan, edit `decisions.md` or any sprint's Decisions log, re-slice the roster, or delete an Open question. The recommendation is advice the downstream step can take or override; the edit is not yours to make. Reserve a bare "this needs a human" for genuinely balanced calls, and when you use it, explain why the options are roughly equal.
 - **Be opinionated about engineering substance.** When a race condition is real or a failure mode is unaddressed, say so plainly. Calibrated severity is not the same as hedged language.
 - **Active voice.** "Sprint 06's worker doesn't gate on the idempotency key Sprint 04 introduced" — not "it could be argued that the worker may not honor idempotency consistently."
 - **No marketing words in the review either.** The same anti-patterns the plan must avoid apply to the review.
@@ -297,7 +299,7 @@ This summary is a digest of what is already in the review document, not new cont
 ## What NOT to do
 
 - **Don't rewrite the plan.** You are reviewing, not authoring. Suggested directions are pointers, not edits.
-- **Don't resolve open questions by editing the plan.** You should have a strong opinion and you should state it as a recommended direction within a menu of options — but you state it in the review, not by rewriting the plan, re-slicing the roster, moving an entry to a Decisions log, or deleting an Open question. Recommend in the review; let the feedback-integration step apply it.
+- **Don't resolve open questions by editing the plan.** You should have a strong opinion and you should state it as a recommended direction within a menu of options — but you state it in the review, not by rewriting the plan, re-slicing the roster, moving an entry into `decisions.md` (or a sprint's Decisions log), or deleting an Open question. Recommend in the review; let the feedback-integration step apply it.
 - **Don't second-guess explicit reasoned decisions.** If a sprint says "we deliberately chose X because Y" and Y is sound, leave it alone unless you have a substantive concern with X or with Y. Pushing back on every decided point is noise.
 - **Don't drown the review in nits.** A review that lists 40 micro-issues and 2 critical ones buries the critical ones. If a nit doesn't earn its place, drop it.
 - **Don't fabricate.** If you don't know what a referenced system does, say "verify against [system]" rather than inventing its behavior. Memory of the codebase is not the same as a current read.
