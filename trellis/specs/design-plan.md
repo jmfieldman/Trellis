@@ -277,7 +277,7 @@ A flat numbered list — one entry per planning round — capturing what changed
 Each entry has two clauses:
 
 1. **What changed.** A summary of what this round resolved or superseded. Cite supersessions explicitly (`R7 supersedes R5's contiguity-cache rule`).
-2. **`_Next:_` clause** — a one-line italic tail naming the recommended next-round focus, citing the Open question(s) by ID + tag. This persists the agent's between-rounds recommendation into the doc itself, so a user picking the doc up a week later via `trellis-design-iterate` doesn't lose the chat-only handoff context. When the plan is complete, the `_Next:_` clause is `graduate to implementation plan` (or `run trellis-design-review for an external check first`).
+2. **`_Next:_` clause** — a one-line italic tail naming the recommended next-round focus, citing the Open question(s) by ID + tag. This persists the agent's between-rounds recommendation into the doc itself, so a user picking the doc up a week later via `design-iterate` doesn't lose the chat-only handoff context. When the plan is complete, the `_Next:_` clause is `graduate to implementation plan` (or `run design-review for an external check first`).
 
 The Rounds log is the doc's git log. Scan it to recover narrative context: "why does the doc say X" → "round 5 supersedes round 3 because Y." Read the latest `_Next:_` clause to recover the agent's prior recommendation for what to work on now.
 
@@ -458,7 +458,7 @@ Verdict semantics:
 
 - **`not-yet-complete`**: At least one load-bearing item from the "complete" list above is still open or undecided. The plan should not graduate to impl yet. The "What's still load-bearing-open" block enumerates the gaps.
 - **`substantially-complete`**: All load-bearing items are decided, but the plan still has rough edges — wording inconsistencies, an Open Questions list with stale entries, a Decisions log missing a recent decision's tag, marketing language to purge. The plan *could* graduate, but the user may want to clean up first. The "Top nits" block enumerates them.
-- **`complete`**: Load-bearing decisions are made *and* the doc is internally clean. Recommend graduating to an implementation plan (or running `trellis-design-review` for an external check first, if the user wants one).
+- **`complete`**: Load-bearing decisions are made *and* the doc is internally clean. Recommend graduating to an implementation plan (or running `design-review` for an external check first, if the user wants one).
 
 Calibration:
 

@@ -1,13 +1,13 @@
 ---
-name: trellis-impl-execute
+name: impl-execute
 description: Execute a range of implementation-plan steps from a sprint file
-argument-hint: <path-to-sprint.md> <from-step-#> [<to-step-#>]
+argument-hint: <sprint-path> <from-step> [<to-step>]
 disable-model-invocation: true
 ---
 
 # Implementation Plan — Execute Steps Skill
 
-You are the **orchestrator** for executing one or more steps from a sprint file produced by the `trellis-impl-create` / `trellis-impl-iterate` skills. The sprint file lives inside an implementation-plan directory (anatomy described in [Implementation Plan Documents — Authoring Guide](../trellis-impl-create/implementation-plan.md)).
+You are the **orchestrator** for executing one or more steps from a sprint file produced by the `impl-create` / `impl-iterate` skills. The sprint file lives inside an implementation-plan directory (anatomy described in [Implementation Plan Documents — Authoring Guide](../specs/implementation-plan.md)).
 
 Your job is **not** to implement the steps yourself in this main conversation. Your job is to:
 
@@ -17,10 +17,10 @@ Your job is **not** to implement the steps yourself in this main conversation. Y
 4. Between steps, verify the repo is in a clean post-commit state before moving on.
 5. After the range is done, surface a tight summary.
 
-The two subagent briefs live in this skill directory:
+The two subagent briefs live in the trellis skill's `subagents/` directory:
 
-- [`step-executor.md`](./step-executor.md) — the per-step subagent brief.
-- [`step-reviewer.md`](./step-reviewer.md) — the review subagent brief that the executor spawns.
+- [`step-executor.md`](../subagents/step-executor.md) — the per-step subagent brief.
+- [`step-reviewer.md`](../subagents/step-reviewer.md) — the review subagent brief that the executor spawns.
 
 You pass each subagent the absolute path to its brief plus the per-invocation parameters; the subagent reads the brief itself. Do **not** copy the brief into the spawn prompt.
 
@@ -44,21 +44,21 @@ The orchestrator still enforces a clean working tree, committed execution record
 
 ## Inputs
 
-This skill is invoked with up to three arguments:
+Extract up to three values from the user's natural-language invocation:
 
-- `$0` — absolute or repo-relative path to a single sprint file (e.g. `docs/impl-plan/03-payment-refund-pathway.md`).
-- `$1` — first step number (inclusive) to execute, e.g. `3`.
-- `$2` — last step number (inclusive) to execute, e.g. `5`. **Optional.**
+- `<sprint-path>` — absolute or repo-relative path to a single sprint file (e.g. `docs/impl-plan/03-payment-refund-pathway.md`).
+- `<from-step>` — first step number (inclusive) to execute, e.g. `3`.
+- `<to-step>` — last step number (inclusive) to execute, e.g. `5`. **Optional.**
 
 Argument shape rules:
 
-- If `$0` is missing, tell the user the invocation is missing the sprint path and stop.
-- If `$1` is missing, tell the user the invocation is missing the from-step number and stop.
-- If `$2` is missing **or** is the empty string **or** equals `$1`, treat the range as a single step (`from = to = $1`).
-- If `$2 < $1`, tell the user the range is invalid (`from > to`) and stop. Do not silently swap.
+- If `<sprint-path>` is missing, tell the user the invocation is missing the sprint path and stop.
+- If `<from-step>` is missing, tell the user the invocation is missing the from-step number and stop.
+- If `<to-step>` is missing **or** equals `<from-step>`, treat the range as a single step (`from = to = <from-step>`).
+- If `<to-step> < <from-step>`, tell the user the range is invalid (`from > to`) and stop. Do not silently swap.
 - Step numbers must be non-negative integers. Reject anything else.
 
-Treat the user's invocation as final on argument shape — do not ask follow-up questions about them; if shape is invalid, stop with a clear error.
+Treat the user's invocation as final on argument shape — do not ask follow-up questions about them once they are provided; if shape is invalid, stop with a clear error.
 
 **Additional context.** The user may include free-text instructions alongside the skill invocation. Treat those as overrides to anything in this brief. Forward them to the per-step subagent verbatim in the section labelled "Additional user instructions" (see "Spawning the per-step subagent" below) so each step receives the same overrides.
 
@@ -84,7 +84,7 @@ This skill creates one commit per step. Committing directly to a trunk branch is
 
 ### 3. Sprint file exists and has the required structure
 
-`Read` the sprint file at `$0`. If the file does not exist, stop and report the path that failed.
+`Read` the sprint file at `<sprint-path>`. If the file does not exist, stop and report the path that failed.
 
 The file must clear **both** a structural and a substance bar before you dispatch. Stop and report any failure precisely (cite which check failed and what was expected).
 
@@ -101,9 +101,9 @@ The file must clear **both** a structural and a substance bar before you dispatc
 - Each step in range has all four mandatory subsections (`**Goal**`, `**Actions**`, `**Deliverables**`, `**Verification**`) and none of them is a placeholder (`_To be locked in a later round._`, `TBD`, `TODO`, an empty bullet, etc.).
 - The Verification subsection names at least one concrete check (a command, a test name, an assertion, or an explicitly-labeled manual check). If Verification is "tests pass" or similarly generic, stop — the step isn't execution-ready and the executor would have nothing to verify against.
 
-If a step in range fails substance, stop and tell the user the step isn't execution-ready; route them to `trellis-impl-iterate` to lock it before re-invoking this skill.
+If a step in range fails substance, stop and tell the user the step isn't execution-ready; route them to `impl-iterate` to lock it before re-invoking this skill.
 
-Locate the implementation-plan **directory** by taking the parent of `$0`. Confirm `overview.md` and `progress.md` exist in that directory; if either is missing, warn the user (do not stop — some plans may be partial — but flag it so the subagent knows). Also note whether `decisions.md` and `status.md` exist — newer plans split the plan-level Decisions log and Status log into their own top-level files; legacy plans kept those sections inside `overview.md`. The executor doesn't typically need to read either, but their existence indicates which layout the plan is on.
+Locate the implementation-plan **directory** by taking the parent of `<sprint-path>`. Confirm `overview.md` and `progress.md` exist in that directory; if either is missing, warn the user (do not stop — some plans may be partial — but flag it so the subagent knows). Also note whether `decisions.md` and `status.md` exist — newer plans split the plan-level Decisions log and Status log into their own top-level files; legacy plans kept those sections inside `overview.md`. The executor doesn't typically need to read either, but their existence indicates which layout the plan is on.
 
 ### 4. Identify the steps in range
 
@@ -136,9 +136,9 @@ Resolution paths (pick one, then re-invoke):
   1. If the sprint file is correct, edit `progress.md` to match.
   2. If `progress.md` is correct, edit the sprint file's Progress section to match.
   3. If the sprint was re-sliced or otherwise structurally changed, the right
-     fix is a planning round — run `/trellis-impl-iterate <plan-dir>` (or
-     `/trellis-impl-integrate-feedback` when there's review feedback to
-     reconcile) before re-invoking this skill.
+     fix is a planning round — ask trellis to iterate the impl plan (or
+     integrate feedback when there's review feedback to reconcile) before
+     re-invoking this skill.
 
 This skill cannot pick a side; the right answer depends on what the plan
 intends, which is a human / planning decision.
@@ -175,23 +175,23 @@ The spawn prompt is short and self-contained:
 You are executing one step from a trellis implementation-plan sprint.
 
 Read the brief at:
-  <absolute-path-to-skill-dir>/step-executor.md
+  <absolute-path-to-trellis-dir>/subagents/step-executor.md
 
 That brief tells you exactly what to do. Read it end to end before doing anything else.
 It also tells you to load Trellis instruction files from `~/.trellis/instructions.md` and `<repo-root>/.trellis/instructions.md` when present; do that before implementing the step.
 
 Parameters for this invocation:
-- Sprint file: <absolute-path-to-$0>
-- Implementation-plan directory: <absolute-path-to-parent-of-$0>
+- Sprint file: <absolute-path-to-sprint-path>
+- Implementation-plan directory: <absolute-path-to-parent-of-sprint-path>
 - Step number to execute: <N>
 - Step title (for sanity-check against the sprint file): <title from sprint file>
 - Is final step in requested range: <true if N is the last dispatched step in this invocation, else false>
 - Feature branch: <current branch name>
-- Reviewer brief (you will spawn a reviewer subagent yourself): <absolute-path-to-skill-dir>/step-reviewer.md
+- Reviewer brief (you will spawn a reviewer subagent yourself): <absolute-path-to-trellis-dir>/subagents/step-reviewer.md
 - Execution-record path: <absolute-path-to-impl-plan-dir>/reviews/<sprint-stem>/step-<N>.md
 
 Additional user instructions (forwarded verbatim from the orchestrator invocation; these override the brief on conflict):
-<paste any free-text instructions the user attached to /trellis-impl-execute, or "(none)" if none>
+<paste any free-text instructions the user attached to the trellis invocation, or "(none)" if none>
 
 When you are done, return a single fenced YAML block with exactly these keys (no extra prose before or after the block):
 
@@ -216,7 +216,7 @@ When you are done, return a single fenced YAML block with exactly these keys (no
 Nothing else. The orchestrator parses this block to validate the hand-back.
 ```
 
-Use absolute paths. Both briefs are siblings of this `SKILL.md` — `./step-executor.md` and `./step-reviewer.md` — so resolve `<absolute-path-to-skill-dir>` from wherever this `SKILL.md` was loaded from (do not assume a fixed install location). The two relative links at the top of this file (`./step-executor.md`, `./step-reviewer.md`) are the canonical references.
+Use absolute paths. Both briefs live in the `subagents/` directory of the trellis skill — `../subagents/step-executor.md` and `../subagents/step-reviewer.md` relative to this instruction file — so resolve `<absolute-path-to-trellis-dir>` from wherever the top-level trellis `SKILL.md` was loaded from (do not assume a fixed install location). The two relative links at the top of this file (`../subagents/step-executor.md`, `../subagents/step-reviewer.md`) are the canonical references.
 
 Do not run the subagent in the background — its result gates the next step.
 
@@ -242,7 +242,7 @@ If any check fails, do **not** auto-retry. Report what you found and let the use
 Enter this path only when the executor returned `status: done` with `review_verdict: not_run`. The audit property — fresh-context reader of the diff — is preserved because **you** are dispatching the reviewer from a context that has not seen the executor's implementation reasoning. You may want to keep this loop tight; some intermediate validation differs from the default path:
 
 1. **Pre-review state check.** `git status --porcelain=v1` is empty; the commits in the YAML hand-back exist; the execution-record file at the path in `review_files:` exists and is committed (verified via `git ls-files`); the sprint file's Progress and `progress.md` are **still unchecked** for Step `N` (the executor was told to leave them alone in this path). If any of those is wrong, stop and report — the executor violated the fallback contract.
-2. **Dispatch the reviewer yourself**, using the reviewer brief at `<absolute-path-to-skill-dir>/step-reviewer.md` and the same per-step parameters you computed for the executor (sprint file, step number, step title, execution-record path, feature branch, commit range from the executor's `commits:` list, round number = 1, is-final-in-range flag). Tell the reviewer it was dispatched by the orchestrator rather than the executor (treatment is otherwise identical). Do not run the reviewer in the background — its result gates the next move.
+2. **Dispatch the reviewer yourself**, using the reviewer brief at `<absolute-path-to-trellis-dir>/subagents/step-reviewer.md` and the same per-step parameters you computed for the executor (sprint file, step number, step title, execution-record path, feature branch, commit range from the executor's `commits:` list, round number = 1, is-final-in-range flag). Tell the reviewer it was dispatched by the orchestrator rather than the executor (treatment is otherwise identical). Do not run the reviewer in the background — its result gates the next move.
 3. **Parse the reviewer's verdict** (returned as a brief acknowledgment in chat; the substantive review lives in the appended execution-record section). Then:
    - **`clean`** — commit the execution-record append along with the Progress / Deviations / Post Mortem updates the executor would have committed in the default path. One commit is fine (`<feature-area>: sprint <NN> step <N> — review clean, mark Progress`). The commit goes through the project's pre-commit hook normally.
    - **`in_step_fixes`** — re-dispatch the executor with the round-1 findings as additional context (paste the appended review section verbatim into a "Round-1 reviewer findings" block in the new spawn prompt). The re-dispatched executor applies fixes, commits, and returns YAML with `review_verdict: in_step_fixes`, `review_rounds: 1`. Then dispatch a round-2 reviewer (if the fixes are non-trivial per the executor brief's re-review criteria) or accept the round-1 findings closed and finalize as in the `clean` path.
@@ -282,7 +282,7 @@ Once every step in the requested range has executed successfully:
 End the run with a tight summary. The user has already seen each per-step subagent's hand-back; do not re-narrate them.
 
 ```
-### trellis-impl-execute — summary
+### impl-execute — summary
 
 **Sprint:** `<sprint file basename>` — <sprint title>
 **Range requested:** Step `<from>` … Step `<to>` (`<N>` step(s))
@@ -329,7 +329,7 @@ For each, report the offending state precisely (commit SHA, status output, file 
 - It does not push the branch. The user pushes when ready.
 - It does not open a PR. PR creation is out of scope.
 - It does not amend commits. Each step is its own commit; pre-commit-hook failures are resolved by *new* commits, not amends, except for the explicitly documented non-final-step `--no-verify` path.
-- It does not re-slice the sprint, edit the plan beyond Progress / Deviations / Post Mortem, or invoke other trellis skills. If a step requires a planning change, the subagent flags it and the user runs the appropriate planning skill (`trellis-impl-iterate` etc.) afterward.
+- It does not re-slice the sprint, edit the plan beyond Progress / Deviations / Post Mortem, or invoke other trellis skills. If a step requires a planning change, the subagent flags it and the user runs the appropriate planning skill (`impl-iterate` etc.) afterward.
 
 ---
 

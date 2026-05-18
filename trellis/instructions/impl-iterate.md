@@ -1,7 +1,7 @@
 ---
-name: trellis-impl-iterate
+name: impl-iterate
 description: Iterate on an Implementation Plan
-argument-hint: <path-to-plan-directory>
+argument-hint: <root> | <impl-plan-dir>
 disable-model-invocation: true
 ---
 
@@ -17,14 +17,18 @@ The round mechanics below are **load-bearing** and easy to drop under load. Read
 
 ## Required inputs
 
-The path to the implementation plan directory is: $0
+The user supplies the feature root `<root>` (most common case), or an explicit `<impl-plan-dir>`. Resolution rule:
 
-If `$0` is empty, tell the user they invoked the skill incorrectly (missing path argument) and stop.
+- If the user named a feature root (e.g., "iterate the impl plan at `docs/refunds/`"), set `<impl-plan-dir>` to `<root>/impl/`.
+- If the user named a directory that already contains `overview.md` (e.g., "iterate `docs/refunds/sprint-plans/`"), treat that as `<impl-plan-dir>` directly.
+- If neither holds — the path is ambiguous or doesn't exist — ask the user and stop.
+
+After resolution, `<impl-plan-dir>` is the canonical directory the rest of this brief operates on.
 
 Before doing anything, in this order:
 
-1. Read the [Implementation Plan Documents — Authoring Guide](../trellis-impl-create/implementation-plan.md) end to end. Do not skim.
-2. Read **every file** in the plan directory at `$0`, top to bottom, in this order:
+1. Read the [Implementation Plan Documents — Authoring Guide](../specs/implementation-plan.md) end to end. Do not skim.
+2. Read **every file** in the plan directory at `<impl-plan-dir>`, top to bottom, in this order:
    - `overview.md` — internalize philosophy, feature-wide locked decisions, sprint roster, dependency graph, open questions.
    - `decisions.md` — the plan-level (cross-cutting) Decisions log. Note the latest round tag.
    - `status.md` — the plan-level round-by-round audit trail. Note the current round number and the latest `_Next:_` clause.
@@ -77,7 +81,7 @@ For each Open question this round will resolve:
 
 For sprint-locking rounds, additionally surface:
 
-- The **archetype** you're treating the sprint as (Foundation / Logic-layer / Capability / Integration / Helper / Async / Surface / Hardening per [implementation-plan.md § "Common sprint archetypes"](../trellis-impl-create/implementation-plan.md)). The archetype shapes what categories the Locked Decisions table needs.
+- The **archetype** you're treating the sprint as (Foundation / Logic-layer / Capability / Integration / Helper / Async / Surface / Hardening per [implementation-plan.md § "Common sprint archetypes"](../specs/implementation-plan.md)). The archetype shapes what categories the Locked Decisions table needs.
 - Any **structural ambiguity** the sprint has that you'd resolve by splitting / folding before locking — frame this as an option even if your recommendation is "lock as-is."
 
 Then **wait for the user**. Do not auto-resolve. Do not pre-decide structure. Even when you have a strong opinion, the user picks.
@@ -90,9 +94,9 @@ For every resolution, edits land in **all** the files that surface holds. Many e
 
 Within a single file:
 
-1. **Rewrite the affected section** to reflect the chosen design. Purge obsolete wording — do not leave both old and new versions side-by-side. Supersession discipline is described in [implementation-plan.md § "Supersession"](../trellis-impl-create/implementation-plan.md).
+1. **Rewrite the affected section** to reflect the chosen design. Purge obsolete wording — do not leave both old and new versions side-by-side. Supersession discipline is described in [implementation-plan.md § "Supersession"](../specs/implementation-plan.md).
 2. **Add a tagged bullet to the relevant Decisions log** with `(R<n>)`. Cross-cutting calls go in **`decisions.md`** (the plan-level top-level file — not a section inside `overview.md`); sprint-scoped calls go in the affected sprint file's Decisions log section. Each bullet leads with a **bold phrase** naming the call.
-3. **Compress older Decisions-log entries** at every scope this round touched. Walk both `decisions.md` and the affected sprint files' Decisions logs; condense any entry that this round (or an earlier round) has superseded, plus any entry whose details have gone stale. Compressed form: `- **<lead>.** Superseded by R<m>. (R<n>)` — round tag + supersession pointer preserved, rationale paragraph dropped. Keep the last 2–3 rounds and any still-actively-load-bearing entry in full. See [implementation-plan.md § "`decisions.md` anatomy"](../trellis-impl-create/implementation-plan.md). The audit trail survives; only obsolete prose is dropped.
+3. **Compress older Decisions-log entries** at every scope this round touched. Walk both `decisions.md` and the affected sprint files' Decisions logs; condense any entry that this round (or an earlier round) has superseded, plus any entry whose details have gone stale. Compressed form: `- **<lead>.** Superseded by R<m>. (R<n>)` — round tag + supersession pointer preserved, rationale paragraph dropped. Keep the last 2–3 rounds and any still-actively-load-bearing entry in full. See [implementation-plan.md § "`decisions.md` anatomy"](../specs/implementation-plan.md). The audit trail survives; only obsolete prose is dropped.
 4. **Remove the resolved entry from Open questions** at the right scope. Do not append `(resolved)` in place — entries **move** to Decisions log.
 5. **Add newly-surfaced sub-questions** to the right Open-questions list (overview vs. sprint). Keep them numbered append-only.
 
@@ -100,7 +104,7 @@ Across files (multi-file edits):
 
 1. **List every file the resolution will touch before editing any of them.** Which file owns the canonical wording? Which files reference it? Does `overview.md` need updating (module-tree, dependency-graph one-liner, sprint roster, feature-wide locked decisions)? Do `decisions.md` or `status.md` need a new entry? Does `progress.md` need updating? Does the affected sprint's per-sprint Progress section need to mirror a `progress.md` change?
 2. **Edit canonical wording first**, consumers second. The file that *owns* a renamed Deliverable / Locked Decision / module-tree entry is updated before any file that *references* it.
-3. **After the edit pass, grep the directory for the rejected wording** (`grep -rn '<old wording>' <plan-dir>`). Zero hits is the only acceptable result. One or more hits means a consumer was missed.
+3. **After the edit pass, grep the directory for the rejected wording** (`grep -rn '<old wording>' <impl-plan-dir>`). Zero hits is the only acceptable result. One or more hits means a consumer was missed.
 
 `progress.md` and per-sprint Progress sections must stay in lockstep. If you edit one, edit the other in the same pass. The master `progress.md` wins on conflict; the per-sprint copy is reconciled to it (unless the master is the broken side).
 
@@ -158,15 +162,15 @@ Examples:
 - **Round 12**: every sprint now execution-ready; cross-sprint coherence checks pass. _Next:_ hand off to implementation.
 ```
 
-Why the `_Next:_` clause: it persists the chat-only hand-off recommendation into the doc itself. A user resuming the plan a week later via `trellis-impl-iterate` reads the latest `_Next:_` and knows where to pick up — without depending on prior chat history.
+Why the `_Next:_` clause: it persists the chat-only hand-off recommendation into the doc itself. A user resuming the plan a week later via `impl-iterate` reads the latest `_Next:_` and knows where to pick up — without depending on prior chat history.
 
-Pick the `_Next:_` clause from your completeness assessment's "Recommended next-round focus" (Step 8) — they should agree. When the threshold graded is `sprint-NN-execution-ready` and that verdict is `complete`, the `_Next:_` clause is typically `lock Sprint <NN+1>`. When the threshold is `plan-complete`, the clause is `hand off to implementation` (or `run trellis-impl-review first`).
+Pick the `_Next:_` clause from your completeness assessment's "Recommended next-round focus" (Step 8) — they should agree. When the threshold graded is `sprint-NN-execution-ready` and that verdict is `complete`, the `_Next:_` clause is typically `lock Sprint <NN+1>`. When the threshold is `plan-complete`, the clause is `hand off to implementation` (or `run impl-review first`).
 
 Cite supersessions explicitly (e.g., `R7 supersedes R5's contiguity-cache rule`; `re-sliced 06 into 06-resolve and 07-deduplicate; renumbered 07–10 → 08–11`).
 
 If the round materially changed a single sprint, append a sprint-scoped Status / Feedback-incorporated entry to that sprint file too (in addition to the entry in `status.md`). Status entries are append-only **for the round you are appending** — never edit *prior* entries to falsify what happened.
 
-However, **compress older Status entries** that no longer carry weight. When you append the new round, walk both `status.md` and any sprint-level Status / Feedback-incorporated logs; condense entries whose `_Next:_` clause is long-finished (drop the `_Next:_`) or whose round-summary detail is no longer load-bearing because later rounds superseded it (collapse to `**Round <n>**: <one-clause summary>`). Keep the last 2–3 rounds in full at each scope. Never delete a round entry outright — round numbering must stay contiguous and grep-able. See [implementation-plan.md § "`status.md` anatomy"](../trellis-impl-create/implementation-plan.md). Compression is *not* falsification: obsolete prose is dropped, the audit trail (round number + supersession link) is preserved.
+However, **compress older Status entries** that no longer carry weight. When you append the new round, walk both `status.md` and any sprint-level Status / Feedback-incorporated logs; condense entries whose `_Next:_` clause is long-finished (drop the `_Next:_`) or whose round-summary detail is no longer load-bearing because later rounds superseded it (collapse to `**Round <n>**: <one-clause summary>`). Keep the last 2–3 rounds in full at each scope. Never delete a round entry outright — round numbering must stay contiguous and grep-able. See [implementation-plan.md § "`status.md` anatomy"](../specs/implementation-plan.md). Compression is *not* falsification: obsolete prose is dropped, the audit trail (round number + supersession link) is preserved.
 
 ### Step 8 — Emit the completeness assessment to chat
 
@@ -198,7 +202,7 @@ Use this exact structure:
 - <one-line recommendation; usually the load-bearing-open items, or "lock Sprint NN+1" if the current sprint is execution-ready, or "hand off to implementation" if plan-complete>
 ```
 
-Verdict semantics (relative to the chosen threshold; full definitions in [implementation-plan.md § "Round-end completeness assessment"](../trellis-impl-create/implementation-plan.md)):
+Verdict semantics (relative to the chosen threshold; full definitions in [implementation-plan.md § "Round-end completeness assessment"](../specs/implementation-plan.md)):
 
 - **`not-yet-complete`** — at least one load-bearing item from the threshold's checklist is open or undecided.
 - **`substantially-complete`** — load-bearing items are decided but rough edges remain (drift, stale wording, marketing language, missing tag).

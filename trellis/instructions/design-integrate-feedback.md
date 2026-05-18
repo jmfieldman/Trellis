@@ -1,24 +1,24 @@
 ---
-name: trellis-design-integrate-feedback
+name: design-integrate-feedback
 description: Integrate Feedback into a Design Plan
-argument-hint: <path-to-plan-file> <feedback-file>
+argument-hint: <root> <feedback-path>
 disable-model-invocation: true
 ---
 
 # Skill — Incorporate review feedback into a design plan
 
-You are continuing an in-progress design plan by reconciling it against a separate review document. The plan is the living artifact (anatomy and rules described in [Design Plan Documents — Authoring Guide](../trellis-design-create/design-plan.md); the review document is one round of external critique against it. Your job in this invocation is **triage and incorporation**, not full re-design — you are processing the review, not running a fresh planning round.
+You are continuing an in-progress design plan by reconciling it against a separate review document. The plan is the living artifact (anatomy and rules described in [Design Plan Documents — Authoring Guide](../specs/design-plan.md); the review document is one round of external critique against it. Your job in this invocation is **triage and incorporation**, not full re-design — you are processing the review, not running a fresh planning round.
 
 ## Inputs
 
-You will be given two file paths:
+Extract two paths from the user's natural-language invocation:
 
-1. **`<plan-path>`** — the design plan in progress: $0
-2. **`<feedback-path>`** — a review of that plan: $1
- 
+1. **`<root>`** — the directory containing the canonical design plan file `<root>/design.md`. If the user gave a path ending in `design.md`, treat its parent directory as `<root>`.
+2. **`<feedback-path>`** — a review of that plan.
+
 Each review item typically has a *Where*, *Concern*, *Why it matters*, and *Suggested direction*.
 
-If one of the paths is not provided, tell the user they forgot an argument to this skill invocation, and stop.
+If either is missing, ask the user for it and stop. If `<root>/design.md` does not exist, stop and report the missing file.
 
 ## What you are doing (and not doing)
 
@@ -187,10 +187,10 @@ When you do incorporate:
 
 - **Edit the relevant body section directly.** Do not leave both old and new wording side-by-side; purge the obsolete phrasing per the authoring guide's supersession rule.
 - **Add a tagged bullet to the Decisions log** for each material incorporation, using the next round number (`(R<n>)`). For pure typo / wording / structural-cleanup edits, a Decisions-log entry is optional — but for anything that names a call the plan now relies on, log it. Lead with a bold phrase that names the call.
-- **Compress older Decisions-log entries** that this incorporation pass (or an earlier round) has superseded, and any entries whose details have gone stale. Condense to a one-line marker that preserves the round tag and supersession pointer (`- **<lead>.** Superseded by R<m>. (R<n>)`); drop the rationale paragraph. Keep the last 2–3 rounds and any still-actively-load-bearing entry in full. See [design-plan.md § 14 → "Compressing older entries"](../trellis-design-create/design-plan.md). The audit trail survives; only obsolete prose is dropped.
+- **Compress older Decisions-log entries** that this incorporation pass (or an earlier round) has superseded, and any entries whose details have gone stale. Condense to a one-line marker that preserves the round tag and supersession pointer (`- **<lead>.** Superseded by R<m>. (R<n>)`); drop the rationale paragraph. Keep the last 2–3 rounds and any still-actively-load-bearing entry in full. See [design-plan.md § 14 → "Compressing older entries"](../specs/design-plan.md). The audit trail survives; only obsolete prose is dropped.
 - **Update Open questions**: remove an entry if the incorporation resolves it (rare in this skill — usually means you should have triaged it as Open question instead); add an entry for each item triaged into the Open-question bucket.
-- **Append exactly one new Status entry** for this incorporation pass. Format: `**Round <n>**: incorporated review feedback — <one-line summary of what changed>; <count> items added to Open questions; <count> items declined. _Next:_ <one-line recommended focus for the next planning round, citing Open question IDs + tags>.` Round number is the plan's next integer. The `_Next:_` clause persists the recommendation into the doc itself — a user resuming the plan via `trellis-design-iterate` reads it to recover where to pick up. When all newly-filed Open questions are `[deferred]` / `[exploratory]` and no `[blocks-v1]` / `[blocks-impl]` items remain anywhere in the plan, the `_Next:_` clause is `graduate to implementation plan`.
-- **Compress older Status entries** that no longer carry weight. After appending the new entry, walk the older entries and condense any whose `_Next:_` clause is long-finished (drop the `_Next:_`) or whose round-summary detail is no longer load-bearing because later rounds superseded it (collapse to `**Round <n>**: <one-clause summary>`). Keep the last 2–3 rounds in full. Never delete a round outright — round numbering stays contiguous and grep-able. See [design-plan.md § 15 → "Compressing older Status entries"](../trellis-design-create/design-plan.md). Compression is *not* falsification: the audit trail (round number + supersession link) is preserved; only obsolete prose is dropped.
+- **Append exactly one new Status entry** for this incorporation pass. Format: `**Round <n>**: incorporated review feedback — <one-line summary of what changed>; <count> items added to Open questions; <count> items declined. _Next:_ <one-line recommended focus for the next planning round, citing Open question IDs + tags>.` Round number is the plan's next integer. The `_Next:_` clause persists the recommendation into the doc itself — a user resuming the plan via `design-iterate` reads it to recover where to pick up. When all newly-filed Open questions are `[deferred]` / `[exploratory]` and no `[blocks-v1]` / `[blocks-impl]` items remain anywhere in the plan, the `_Next:_` clause is `graduate to implementation plan`.
+- **Compress older Status entries** that no longer carry weight. After appending the new entry, walk the older entries and condense any whose `_Next:_` clause is long-finished (drop the `_Next:_`) or whose round-summary detail is no longer load-bearing because later rounds superseded it (collapse to `**Round <n>**: <one-clause summary>`). Keep the last 2–3 rounds in full. Never delete a round outright — round numbering stays contiguous and grep-able. See [design-plan.md § 15 → "Compressing older Status entries"](../specs/design-plan.md). Compression is *not* falsification: the audit trail (round number + supersession link) is preserved; only obsolete prose is dropped.
 - **Re-read affected sections** after editing to catch wording from earlier rounds that your edits silently invalidated. If you find any, fix them in the same pass and note the supersession in the Status entry.
 - **Preserve internal consistency.** If incorporating one review item creates a tension with another part of the plan you didn't touch, either resolve it by extending the edit or file the new tension as an Open question. Do not leave the plan internally contradictory.
 - **Honor authoring conventions.** Bold the decision lead in Decisions-log entries. Tag every Decisions-log bullet with `(R<n>)`. Use canonical terms. No marketing words. Identifiers in backticks. Absolute dates only.
@@ -198,7 +198,7 @@ When you do incorporate:
 When you file an Open question:
 
 - Place it at the end of the existing Open-questions list, numbered sequentially. Do not renumber existing entries.
-- **Tag at creation** with exactly one of `[blocks-v1]`, `[blocks-impl]`, `[deferred]`, `[exploratory]` per [design-plan.md § "Open questions" → "Severity tag taxonomy"](../trellis-design-create/design-plan.md). Pick the most blocking tag that applies. If the reviewer's framing makes the tag obvious, use it; if not, default to `[blocks-impl]` for shape questions whose answer the impl plan needs and `[exploratory]` for context-only mentions.
+- **Tag at creation** with exactly one of `[blocks-v1]`, `[blocks-impl]`, `[deferred]`, `[exploratory]` per [design-plan.md § "Open questions" → "Severity tag taxonomy"](../specs/design-plan.md). Pick the most blocking tag that applies. If the reviewer's framing makes the tag obvious, use it; if not, default to `[blocks-impl]` for shape questions whose answer the impl plan needs and `[exploratory]` for context-only mentions.
 - **Make the entry decision-ready.** Because you are surfacing this *instead of* deciding it, the entry must give a human operator everything they need to make the call in one sitting. Include:
   - **The options.** Enumerate the realistic resolutions (carry the reviewer's menu forward, refined by your own analysis — don't just paste it).
   - **Why this needs a human.** State plainly why you didn't adopt the reviewer's recommendation: the consideration the reviewer missed, the missing information, or the fact that the trade-offs are genuinely balanced. Be specific — "needs product input on X" beats "judgment call."

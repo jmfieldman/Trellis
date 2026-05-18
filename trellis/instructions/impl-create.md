@@ -1,7 +1,7 @@
 ---
-name: trellis-impl-create
+name: impl-create
 description: Create a new Implementation Plan
-argument-hint: <source-design-plan> <output-impl-path>
+argument-hint: <root> [<impl-plan-dir>]
 disable-model-invocation: true
 ---
 
@@ -9,13 +9,13 @@ disable-model-invocation: true
 
 Skill prompt for an LLM agent. Activated when the user wants to take a finished (or substantially-resolved) **design plan** and produce the initial scaffolding of an **implementation plan** — i.e., Round 1 of the implementation plan's iteration cycle.
 
-This skill stops at the end of Round 1. Subsequent rounds (fleshing out individual sprints, locking sprint-level decisions, decomposing sprints into steps) follow the round-by-round mechanics in [implementation-plan.md](./implementation-plan.md). After the scaffold lands, hand the conversation back to the user for Round 2.
+This skill stops at the end of Round 1. Subsequent rounds (fleshing out individual sprints, locking sprint-level decisions, decomposing sprints into steps) follow the round-by-round mechanics in [implementation-plan.md](../specs/implementation-plan.md). After the scaffold lands, hand the conversation back to the user for Round 2.
 
 ---
 
 ## What this skill produces
 
-A new directory at the user-supplied path, containing:
+A new directory at `<impl-plan-dir>`, containing:
 
 - `overview.md` — populated framing, philosophy, locked feature-wide decisions, sprint roster + dependency graph, initial Open Questions. **No Decisions log or Status section inside `overview.md`** — those are separate top-level files.
 - `decisions.md` — the plan-level (cross-cutting) Decisions log. Starts empty or with `(R1)`-tagged entries capturing the slicing decisions agreed in Round 1.
@@ -31,15 +31,18 @@ The implementation plan is **not** complete after Round 1. Step-level detail, Ar
 
 ## Required inputs
 
-The design plan is located here: $0
+One or two paths are needed, extracted from the user's natural-language invocation:
 
-The implementation plan should be created in the directory: $1
+- `<root>` — the feature root directory. The agent consumes the design plan at `<root>/design.md`. If the user gave a path ending in `design.md`, treat its parent directory as `<root>`.
+- `<impl-plan-dir>` — **optional.** The directory in which to create the implementation plan. **Defaults to `<root>/impl/`** if the user doesn't override it. Only honor an explicit override when the user names a different path; otherwise use the default.
+
+If `<root>` is missing, ask for it and stop. If `<root>/design.md` does not exist, stop and report the missing file.
 
 Before starting, the agent must have:
 
 1. **The design plan.** Read end to end. The agent must know its vocabulary, foundational decisions (numbered if Shape A; prose if Shape B), Scope / Non-Goals, Schema, Lifecycle sections, API surface, Cross-service contracts, Privacy/Auth, Open questions, and Decisions log.
 2. **The output path** for the implementation plan directory. Create this directory if it doesn't exist.
-3. **The implementation plan specification.** Read [implementation-plan.md](./implementation-plan.md) before producing any files — the document anatomy, file naming, and section ordering rules in that spec are mandatory.
+3. **The implementation plan specification.** Read [implementation-plan.md](../specs/implementation-plan.md) before producing any files — the document anatomy, file naming, and section ordering rules in that spec are mandatory.
 4. **Project context.** Skim the project's `CLAUDE.md`, `AGENTS.md` (or equivalent) so the locked decisions in `overview.md` reflect actual project conventions (test framework, schema-edit authorization, migration policy, idempotency keys, logging, etc.). Don't restate the conventions section verbatim — pin the things every sprint will inherit and link to the project doc for the rest.
 5. **(If they exist) one or more analogue implementation plans in the repo or adjacent repos.** Borrowing structure from a precedent is encouraged — naming conventions, locked-decisions tables, sprint-roster format. Cite the analogue in your Round 1 entry in `status.md` so the user can see the lineage.
 
@@ -56,12 +59,12 @@ If any of these are missing, **stop and ask the user** before producing files. D
 ### Step A — Read everything, then sketch slicing
 
 1. Read the design plan end to end.
-2. Read [implementation-plan.md](./implementation-plan.md) end to end. Pay particular attention to the "Architecture is inherited, not prescribed" section — it governs how examples in this skill are interpreted.
-3. **Read the project's `CLAUDE.md` and any analogue implementation plans the user pointed to** (or that you find adjacent to the design plan). Extract the project's architecture per the checklist in [implementation-plan.md § "Architecture is inherited, not prescribed"](./implementation-plan.md#architecture-is-inherited-not-prescribed) — layering, directory conventions, test layering, build/spec workflow, observability, known-footgun set. The implementation plan you're about to scaffold inherits this architecture; it is not your job to invent one.
+2. Read [implementation-plan.md](../specs/implementation-plan.md) end to end. Pay particular attention to the "Architecture is inherited, not prescribed" section — it governs how examples in this skill are interpreted.
+3. **Read the project's `CLAUDE.md` and any analogue implementation plans the user pointed to** (or that you find adjacent to the design plan). Extract the project's architecture per the checklist in [implementation-plan.md § "Architecture is inherited, not prescribed"](../specs/implementation-plan.md#architecture-is-inherited-not-prescribed) — layering, directory conventions, test layering, build/spec workflow, observability, known-footgun set. The implementation plan you're about to scaffold inherits this architecture; it is not your job to invent one.
 
 4. **Sketch a sprint roster** privately (in scratch / planning context). Begin from the natural seam-lines the *feature* decomposes along *given this project's architecture*. Adopt whatever sequence the project already implies — typically foundation → logic → capability → integration → async → surface → hardening, but the exact shape is stack-specific. Deviations should be deliberate and called out in `overview.md`'s sprint-order rationale.
 
-   See [implementation-plan.md § "Sizing heuristics for sprint slicing"](./implementation-plan.md#sizing-heuristics-for-sprint-slicing) for archetypes (Foundation / Logic-layer / Capability / Integration / Helper / Async / Surface / Hardening), the slicing heuristics (when to split foundation, when to fold a thin logic layer, etc.), and the calibration anchors (5–12 sprints, 5–10 steps/sprint, ≤2 deliverables → fold, 15+ → re-slice). The criteria each sprint must satisfy (coherent, buildable, ~1–2 weeks, DAG, foundational-before-surface) live in that same guide under "Rationale for sprint-sized slices."
+   See [implementation-plan.md § "Sizing heuristics for sprint slicing"](../specs/implementation-plan.md#sizing-heuristics-for-sprint-slicing) for archetypes (Foundation / Logic-layer / Capability / Integration / Helper / Async / Surface / Hardening), the slicing heuristics (when to split foundation, when to fold a thin logic layer, etc.), and the calibration anchors (5–12 sprints, 5–10 steps/sprint, ≤2 deliverables → fold, 15+ → re-slice). The criteria each sprint must satisfy (coherent, buildable, ~1–2 weeks, DAG, foundational-before-surface) live in that same guide under "Rationale for sprint-sized slices."
 
 5. **Identify the cross-cutting decisions** that should live in `overview.md`'s "Feature-wide locked decisions" table. These are the choices every sprint would otherwise re-decide. The exact list depends on the project — pull them from the design plan's foundational decisions plus the project's conventions. Examples from a backend-service shape (translate to your stack): schema location, default-view filters, soft-delete posture, worker cadence, idempotency-key shape, banned patterns, cross-schema FK rule. Examples from a frontend project: design-token sources, store / cache library, routing strategy, accessibility-test thresholds, banned UI primitives. The principle is the same: pin the choices that, left unpinned, would be re-litigated in every sprint.
 
@@ -86,13 +89,13 @@ Ask the user: does this slicing match their mental model? Are there sprints they
 
 ### Step C — Scaffold the directory
 
-Once slicing is agreed, create the directory and the five required artifact types (`overview.md`, `decisions.md`, `status.md`, `progress.md`, one stub per sprint). See [implementation-plan.md § "Directory layout"](./implementation-plan.md) for the canonical file list.
+Once slicing is agreed, create the directory and the five required artifact types (`overview.md`, `decisions.md`, `status.md`, `progress.md`, one stub per sprint). See [implementation-plan.md § "Directory layout"](../specs/implementation-plan.md) for the canonical file list.
 
 #### `overview.md`
 
 Populate every section the implementation plan spec lists, scaled to what's actually known in Round 1:
 
-- **Title & framing block** — link back to the design plan.
+- **Title & framing block** — link back to the design plan. When `<impl-plan-dir>` is the canonical `<root>/impl/`, that link is `../design.md`; otherwise use the actual design-plan path.
 - **Philosophy** — adapt the design plan's tone. Common subsections: "The plan is the source of truth," "Tier-0-aware but never tier-0-locked" (or the project's equivalent), "Cross-service contract over internal cleverness," "Test the cross-service seams hardest," "Small, shippable sprints." Crib language from analogue plans where appropriate; tighten to this feature's specifics.
 - **Architectural invariants the sprints uphold** — restate from the design plan's foundational decisions and the project's `CLAUDE.md`. Be exhaustive about invariants every sprint must verify when touched. The list is project-specific (backend examples: no cross-schema FKs, no peer calls inside DB transactions, append-only constraints. Frontend examples: no direct DOM manipulation outside the renderer, no `any` in public component props. Inherit, don't invent).
 - **Module / directory layout impact** — a code-block tree showing what the codebase looks like at the end of the plan. Note that this is forward-looking; subsequent rounds will tighten file-level detail per sprint.
@@ -115,7 +118,7 @@ Create the file. Body starts with the standard framing block (`> Part of the [<F
 - An **empty bullet list** (most common in Round 1), or
 - One or more `(R1)`-tagged bullets capturing the cross-cutting slicing decisions agreed in Step B.
 
-See [implementation-plan.md § "`decisions.md` anatomy"](./implementation-plan.md) for the format. Don't fabricate decisions just to populate the file — empty + framing block is a perfectly valid Round 1 state.
+See [implementation-plan.md § "`decisions.md` anatomy"](../specs/implementation-plan.md) for the format. Don't fabricate decisions just to populate the file — empty + framing block is a perfectly valid Round 1 state.
 
 #### `status.md`
 
@@ -125,7 +128,7 @@ Create the file. Body starts with the standard framing block (`> Part of the [<F
 - **Round 1**: scaffolding + sprint roster + open questions enumerated. _Next:_ <one-line recommended Round 2 focus — usually "lock Sprint 01 to execution-ready" or, if a particular Open question gates Sprint 01, the question ID + tag + scope>.
 ```
 
-The `_Next:_` clause persists the chat hand-off recommendation into the doc itself so a user resuming via `trellis-impl-iterate` recovers it without depending on chat history. See [implementation-plan.md § "`status.md` anatomy"](./implementation-plan.md) for the format.
+The `_Next:_` clause persists the chat hand-off recommendation into the doc itself so a user resuming via `impl-iterate` recovers it without depending on chat history. See [implementation-plan.md § "`status.md` anatomy"](../specs/implementation-plan.md) for the format.
 
 #### Stub sprint files (`NN-<topic>.md`)
 
@@ -231,7 +234,7 @@ What's explicitly *not* expected after Round 1:
 
 After the scaffold is written, message the user along these lines:
 
-> Round 1 scaffold landed at `<path>`:
+> Round 1 scaffold landed at `<impl-plan-dir>` (the canonical `<root>/impl/`, unless overridden):
 > - `overview.md` (philosophy, sprint roster, dependency graph, feature-wide locked decisions, open questions — no Decisions log or Status section)
 > - `decisions.md` (plan-level Decisions log — empty / R1 entries only)
 > - `status.md` (plan-level Status log — Round 1 entry)

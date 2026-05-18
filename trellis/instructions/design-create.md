@@ -1,7 +1,7 @@
 ---
-name: trellis-design-create
+name: design-create
 description: Create a new Design Plan
-argument-hint: <output-path>
+argument-hint: <root>
 disable-model-invocation: true
 ---
 
@@ -9,13 +9,13 @@ disable-model-invocation: true
 
 Skill prompt for an LLM agent. Activated when the user wants to start a new **design plan** from scratch — i.e., Round 1 of the design plan's iteration cycle.
 
-This skill stops at the end of Round 1. Subsequent rounds (resolving open questions, fleshing out schema / API surface / lifecycle / cross-service contracts) follow the round-by-round mechanics in [design-plan.md](./design-plan.md). After Round 1 lands, hand the conversation back to the user for Round 2 via the `trellis-design-iterate` skill.
+This skill stops at the end of Round 1. Subsequent rounds (resolving open questions, fleshing out schema / API surface / lifecycle / cross-service contracts) follow the round-by-round mechanics in [design-plan.md](../specs/design-plan.md). After Round 1 lands, hand the conversation back to the user for Round 2 via the `design-iterate` skill.
 
 ---
 
 ## What this skill produces
 
-A new markdown file at the user-supplied path, populated with the Round 1 skeleton of a design plan:
+A new markdown file at `<root>/design.md`, populated with the Round 1 skeleton of a design plan:
 
 - **Title & framing block** — what the doc covers, what status it's at, a "not a build spec yet" disclaimer.
 - **Canonical-term clarification** — when the domain has terminology drift between casual speech and the code.
@@ -32,13 +32,13 @@ The Round 1 doc is **not** complete. Schema, API surface, lifecycle / sync / GC,
 
 ## Required inputs
 
-The output path for the design plan is: $0
+The user supplies a single root directory as `<root>` (absolute or repo-relative). The agent always writes the design plan to the canonical file `<root>/design.md`. Take this root from the user's natural-language invocation; ask if it's missing. If the user instead gave a path ending in `design.md`, treat its parent directory as `<root>` — do not re-prompt.
 
 Before starting, the agent must have:
 
-1. **The output path.** The single markdown file the agent will create. Create the parent directory if it doesn't exist; warn before overwriting an existing file.
+1. **The root directory `<root>`.** Create it if it doesn't exist. The output file is always `<root>/design.md`. If a file already exists at that path, warn before overwriting.
 2. **The user's initial briefing.** The high-level shape of what they want to design — the domain, the canonical terminology if any drifts, the rough scope, the load-bearing assumptions they already have. This may be supplied along with the skill invocation, or arrive after the agent prompts for it (see Step A.1).
-3. **The design-plan authoring guide.** Read [design-plan.md](./design-plan.md) end-to-end before producing files — the document anatomy, section ordering, tone, and supersession rules in that guide are mandatory.
+3. **The design-plan authoring guide.** Read [design-plan.md](../specs/design-plan.md) end-to-end before producing files — the document anatomy, section ordering, tone, and supersession rules in that guide are mandatory.
 4. **Project context.** Skim the project's `CLAUDE.md`, `AGENTS.md` (or equivalent) for terminology, conventions, the project's typical service / system shape, banned patterns, and authorization rules (e.g., schema-edit gating). The cross-references list and the foundational decisions should reflect actual project conventions, not generic ones.
 5. **(If they exist) one or more analogue design plans in the repo or adjacent repos.** Borrowing structure from a precedent is encouraged — naming conventions, foundational-decision shape (numbered list vs. Purpose/Scope prose), section ordering. Cite the analogue in your Round 1 Status entry so the user can see the lineage.
 
@@ -55,7 +55,7 @@ If any of these is missing, **stop and ask the user** before producing files. Do
 ### Step A — Read everything, then sketch foundations
 
 1. **Confirm there's a briefing.** If the user invoked the skill with no detail beyond the path, stop and ask: *"Ready for Round 1. Tell me about the system you want to design — what is it, who uses it, what's the rough scope, and what foundational decisions (if any) you've already made."* Do not proceed without a briefing.
-2. **Read the design-plan authoring guide** at [design-plan.md](./design-plan.md) end to end. Pay particular attention to "What these documents are," "Round 1 — scaffolding," the document anatomy section, and the anti-patterns list.
+2. **Read the design-plan authoring guide** at [design-plan.md](../specs/design-plan.md) end to end. Pay particular attention to "What these documents are," "Round 1 — scaffolding," the document anatomy section, and the anti-patterns list.
 3. **Read the project's `CLAUDE.md`** and any analogue design plans the user pointed to (or that you find adjacent to where the new plan will live). Extract:
    - Terminology the project uses (canonical terms, casing conventions, naming styles).
    - The architecture / layering the project follows (services, modules, atomic-design layers, CLI structure, infra modules — whichever applies).
@@ -99,7 +99,7 @@ If the user signals they want to skip this step (`"just draft it"`), proceed —
 
 ### Step C — Draft the Round 1 file
 
-Once framing is agreed, write the file at the user-supplied path. Populate the Round 1 sections per the authoring guide, scaled to what's actually known after Step B:
+Once framing is agreed, write the file at `<root>/design.md`. Populate the Round 1 sections per the authoring guide, scaled to what's actually known after Step B:
 
 - **Title & framing block** — link out to any upstream context (parent initiative, related plans). Default disclaimer: `Living planning artifact … not a build spec yet.`
 - **Canonical-term clarification** — if Step B settled one.
@@ -107,10 +107,10 @@ Once framing is agreed, write the file at the user-supplied path. Populate the R
 - **Foundational decisions** — Shape A or Shape B per the choice from Step B. Each item leads with a bold sentence stating the decision, then a rationale paragraph (or several). Numbered if Shape A. Pull rationale from the user's answers in Step B; do not invent.
 - **Scope and Non-Goals** — the explicit in-scope and out-of-scope-for-v1 lists.
 - **Service boundaries / data ownership** (when applicable) — when the work crosses service lines, name which service owns which tables and which crosses are allowed.
-- **Open questions** — numbered list of everything not resolved in Round 1. Each entry **must** carry a severity tag at creation: `[blocks-v1]`, `[blocks-impl]`, `[deferred]`, or `[exploratory]` (see [design-plan.md § "Open questions" → "Severity tag taxonomy"](./design-plan.md)). Each entry also names: the question briefly; why it's open / what makes it hard; an indicative resolution direction or an explicit "deferred until X"; the named blockee for `[blocks-v1]` / `[blocks-impl]` entries. Round 1 lists skew heavy on `[blocks-v1]` and `[blocks-impl]`; an `[exploratory]`-heavy Round 1 list is a signal that you're capturing background discussion rather than load-bearing gaps. **This section is normally the longest section in a Round 1 doc.**
+- **Open questions** — numbered list of everything not resolved in Round 1. Each entry **must** carry a severity tag at creation: `[blocks-v1]`, `[blocks-impl]`, `[deferred]`, or `[exploratory]` (see [design-plan.md § "Open questions" → "Severity tag taxonomy"](../specs/design-plan.md)). Each entry also names: the question briefly; why it's open / what makes it hard; an indicative resolution direction or an explicit "deferred until X"; the named blockee for `[blocks-v1]` / `[blocks-impl]` entries. Round 1 lists skew heavy on `[blocks-v1]` and `[blocks-impl]`; an `[exploratory]`-heavy Round 1 list is a signal that you're capturing background discussion rather than load-bearing gaps. **This section is normally the longest section in a Round 1 doc.**
 - **Deferred (out of scope for this plan)** — distinct from "Out of scope (v1)" — the longer list of things the design *could* support but isn't doing. One bullet with a brief reason each.
 - **Decisions log** — `(R1)`-tagged entries for everything locked in this round. Each leads with a bold phrase that names the call.
-- **Status** — single entry: `**Round 1**: foundational decisions captured + open questions enumerated. <One sentence on what's most load-bearing-open.> _Next:_ <one-line recommended Round 2 focus — usually 2–3 of the highest-priority [blocks-v1] questions, picked because their resolutions are reasonably independent of each other; cite the question IDs + tags>.` Cite the analogue plan(s) you borrowed structure from, if any. The `_Next:_` clause persists the chat hand-off recommendation into the doc itself so a user resuming via `trellis-design-iterate` recovers it without depending on chat history.
+- **Status** — single entry: `**Round 1**: foundational decisions captured + open questions enumerated. <One sentence on what's most load-bearing-open.> _Next:_ <one-line recommended Round 2 focus — usually 2–3 of the highest-priority [blocks-v1] questions, picked because their resolutions are reasonably independent of each other; cite the question IDs + tags>.` Cite the analogue plan(s) you borrowed structure from, if any. The `_Next:_` clause persists the chat hand-off recommendation into the doc itself so a user resuming via `design-iterate` recovers it without depending on chat history.
 
 Do **not** populate in Round 1 (leave the section out, or include the heading with a placeholder line `_To be drafted in a later round._`):
 
@@ -177,7 +177,7 @@ What's explicitly *not* expected after Round 1:
 - **Don't propose a design "pattern" without surfacing alternatives** when the shape has competing reasonable answers. If you recommend a polymorphic-parent table over subclass tables, the rationale must name the rejected alternative; otherwise the call hides behind a choice that wasn't surfaced.
 - **Don't auto-resolve the user's open questions.** Even when you have a strong opinion, surface alternatives in Step B and let the user pick.
 - **Don't pre-build extensibility hooks for hypotheticals.** "Reserved for future X" columns / fields / sections are fine when the user asked for them; they're noise when the agent invents them.
-- **Don't auto-progress to Round 2.** Hand back to the user after the assessment. Subsequent rounds are driven by the user, via `trellis-design-iterate`.
+- **Don't auto-progress to Round 2.** Hand back to the user after the assessment. Subsequent rounds are driven by the user, via `design-iterate`.
 - **Don't pad the Decisions log with framing decisions you made unilaterally** unless Step B was skipped. If the user signed off on framing in Step B, the foundational decisions are theirs; one `(R1)` entry per foundational decision is appropriate, not extra ones for "decisions" the user already made.
 
 ---
@@ -186,7 +186,7 @@ What's explicitly *not* expected after Round 1:
 
 After the file is written, message the user along these lines:
 
-> Round 1 design plan landed at `<path>`:
+> Round 1 design plan landed at `<root>/design.md`:
 > - Title: <title>
 > - Canonical term: `<term>` (if applicable)
 > - Foundational decisions (`(R1)`): <count> — covering <one-sentence summary of what they cover>
@@ -210,7 +210,7 @@ After the file is written, message the user along these lines:
 > **Recommended next-round focus**:
 > - <Usually: 2–3 of the `[blocks-v1]` items, picked because their resolutions are reasonably independent of each other>
 >
-> Round 2 will be driven by you. When you're ready, invoke `trellis-design-iterate <path>` and tell me which questions to focus on.
+> Round 2 will be driven by you. When you're ready, ask trellis to iterate the design plan at `<root>` and tell me which questions to focus on.
 
 Stop and wait for the user's direction.
 

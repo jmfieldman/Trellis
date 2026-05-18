@@ -1,7 +1,7 @@
 ---
-name: trellis-design-iterate
+name: design-iterate
 description: Iterate on a Design Plan
-argument-hint: <path-to-plan-file>
+argument-hint: <root>
 disable-model-invocation: true
 ---
 
@@ -15,14 +15,14 @@ This skill is the most-invoked skill in the design-plan flow. The round mechanic
 
 ## Required inputs
 
-The path to the design plan to iterate on is: $0
+The user supplies `<root>` — the directory containing the canonical design plan file `<root>/design.md`. Extract this root from the user's natural-language invocation. If the user instead gave a path ending in `design.md`, treat its parent directory as `<root>`.
 
-If `$0` is empty, tell the user they invoked the skill incorrectly (missing path argument) and stop.
+If `<root>` is missing, ask the user for it and stop. If `<root>/design.md` does not exist, stop and report the missing file.
 
 Before doing anything, in this order:
 
-1. Read the [Design Plan Documents — Authoring Guide](../trellis-design-create/design-plan.md) end to end. Do not skim.
-2. Read the existing design plan at `$0` end to end — every section, top to bottom. Don't rely on prior conversation context.
+1. Read the [Design Plan Documents — Authoring Guide](../specs/design-plan.md) end to end. Do not skim.
+2. Read the existing design plan at `<root>/design.md` end to end — every section, top to bottom. Don't rely on prior conversation context.
 3. Skim the project's `CLAUDE.md` (or equivalent) for any project conventions, banned patterns, or authorization rules that may affect this round's decisions.
 
 If the user provided no input beyond the skill invocation, stop here and say: *"Ready for Round &lt;next&gt;. Tell me which Open questions to focus on, or share the input you'd like incorporated."* Do not pick questions on your own.
@@ -67,11 +67,11 @@ If the user pushes back, integrate their pushback and re-frame. If the user says
 
 For every question the user resolved this round, in the same edit pass:
 
-1. **Rewrite the affected body section** to reflect the chosen design. Purge the obsolete wording — do not leave both old and new versions side-by-side. Supersession discipline is described in [design-plan.md § "Supersession"](../trellis-design-create/design-plan.md).
+1. **Rewrite the affected body section** to reflect the chosen design. Purge the obsolete wording — do not leave both old and new versions side-by-side. Supersession discipline is described in [design-plan.md § "Supersession"](../specs/design-plan.md).
 2. **Add a tagged bullet to the Decisions log** with the next round number, e.g. `(R<n>)`. Each bullet leads with a **bold phrase** that names the call.
-3. **Compress older Decisions-log entries** that this round (or an earlier round) has superseded, and any entries whose details have gone stale. Condense them to a one-line marker that preserves the round tag and supersession pointer (`- **<lead>.** Superseded by R<m>. (R<n>)`); drop the rationale paragraph. Keep the last 2–3 rounds and any still-actively-load-bearing entry in full regardless of age. See [design-plan.md § 14 → "Compressing older entries"](../trellis-design-create/design-plan.md). The audit trail (round number + supersession link) must survive; only obsolete prose is dropped.
+3. **Compress older Decisions-log entries** that this round (or an earlier round) has superseded, and any entries whose details have gone stale. Condense them to a one-line marker that preserves the round tag and supersession pointer (`- **<lead>.** Superseded by R<m>. (R<n>)`); drop the rationale paragraph. Keep the last 2–3 rounds and any still-actively-load-bearing entry in full regardless of age. See [design-plan.md § 14 → "Compressing older entries"](../specs/design-plan.md). The audit trail (round number + supersession link) must survive; only obsolete prose is dropped.
 4. **Remove the resolved entry from Open questions.** Do not append `(resolved)` in place — the entry **moves** to Decisions log. Do not renumber remaining entries.
-5. **Add any newly-surfaced sub-questions** to Open questions for the next round. Tag each at creation with exactly one of `[blocks-v1]` / `[blocks-impl]` / `[deferred]` / `[exploratory]` per [design-plan.md § "Severity tag taxonomy"](../trellis-design-create/design-plan.md). For `[blocks-v1]` / `[blocks-impl]` entries, name the specific blockee.
+5. **Add any newly-surfaced sub-questions** to Open questions for the next round. Tag each at creation with exactly one of `[blocks-v1]` / `[blocks-impl]` / `[deferred]` / `[exploratory]` per [design-plan.md § "Severity tag taxonomy"](../specs/design-plan.md). For `[blocks-v1]` / `[blocks-impl]` entries, name the specific blockee.
 
 ### Step 5 — Re-read affected sections
 
@@ -110,13 +110,13 @@ Examples:
 - **Round 8**: schema for `chat.reactions` finalized; soft-delete cascade documented. _Next:_ graduate to implementation plan — no [blocks-v1] / [blocks-impl] entries remain.
 ```
 
-Why the `_Next:_` clause: it persists the chat-only hand-off recommendation into the doc itself. A user resuming the plan a week later via `trellis-design-iterate` reads the latest `_Next:_` and knows where to pick up — without depending on prior chat history.
+Why the `_Next:_` clause: it persists the chat-only hand-off recommendation into the doc itself. A user resuming the plan a week later via `design-iterate` reads the latest `_Next:_` and knows where to pick up — without depending on prior chat history.
 
-Pick the `_Next:_` clause from your completeness assessment's "Recommended next-round focus" (Step 8) — they should agree. If the plan is complete, the `_Next:_` clause is `graduate to implementation plan` (or `run trellis-design-review for an external check first` if the user asked for one).
+Pick the `_Next:_` clause from your completeness assessment's "Recommended next-round focus" (Step 8) — they should agree. If the plan is complete, the `_Next:_` clause is `graduate to implementation plan` (or `run design-review for an external check first` if the user asked for one).
 
 Cite supersessions explicitly when they happened (e.g., `R7 supersedes R5's contiguity-cache rule`). Status entries are append-only **for the round you are appending** — never edit *prior* entries to falsify what happened.
 
-However, **compress older Status entries** that no longer carry weight. When you append the new round, walk the older entries and condense any whose `_Next:_` clause is long-finished (drop the `_Next:_` clause) or whose summary detail is no longer load-bearing because later rounds superseded it (collapse to `**Round <n>**: <one-clause summary>`). Keep the last 2–3 rounds in full. Never delete a round entry outright — round numbering must stay contiguous and grep-able. See [design-plan.md § 15 → "Compressing older Status entries"](../trellis-design-create/design-plan.md). The compression is *not* a falsification: the entries that gain detail (the superseding round) and the entries that lose detail (the superseded round) are consistent with what actually happened; obsolete prose is dropped, the audit trail is preserved.
+However, **compress older Status entries** that no longer carry weight. When you append the new round, walk the older entries and condense any whose `_Next:_` clause is long-finished (drop the `_Next:_` clause) or whose summary detail is no longer load-bearing because later rounds superseded it (collapse to `**Round <n>**: <one-clause summary>`). Keep the last 2–3 rounds in full. Never delete a round entry outright — round numbering must stay contiguous and grep-able. See [design-plan.md § 15 → "Compressing older Status entries"](../specs/design-plan.md). The compression is *not* a falsification: the entries that gain detail (the superseding round) and the entries that lose detail (the superseded round) are consistent with what actually happened; obsolete prose is dropped, the audit trail is preserved.
 
 ### Step 8 — Emit the completeness assessment to chat
 
@@ -142,11 +142,11 @@ Use this exact structure:
 - <one-line recommendation; usually the highest-priority blocks-v1 / blocks-impl items, or "graduate to implementation plan" if complete>
 ```
 
-Verdict semantics (full definitions in [design-plan.md § "Round-end completeness assessment"](../trellis-design-create/design-plan.md)):
+Verdict semantics (full definitions in [design-plan.md § "Round-end completeness assessment"](../specs/design-plan.md)):
 
 - **`not-yet-complete`** — at least one load-bearing item is still open or undecided. Default to this verdict whenever any `[blocks-v1]` or `[blocks-impl]` entry remains open. The "What's still load-bearing-open" block enumerates the gaps.
 - **`substantially-complete`** — all load-bearing items are decided, but rough edges remain (stale wording, marketing language to purge, a missing tag, a Decisions log entry that drops a clause). The "Top nits" block enumerates them.
-- **`complete`** — load-bearing decisions are made *and* the doc is internally clean. Recommend graduating to an implementation plan (or running `trellis-design-review` first if the user wants an external check).
+- **`complete`** — load-bearing decisions are made *and* the doc is internally clean. Recommend graduating to an implementation plan (or running `design-review` first if the user wants an external check).
 
 Calibration:
 

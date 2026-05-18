@@ -1,14 +1,14 @@
 # Trellis
 
-A set of manually-invoked Claude Code / Codex skills for taking an engineering feature from "rough idea" to "merged code, one reviewable commit per step."
+A single, manually-invoked Claude Code / Codex skill for taking an engineering feature from "rough idea" to "merged code, one reviewable commit per step."
 
 Trellis splits the work into three layers, each with its own discipline:
 
-1. **Design plan** — _what_ the system is. Decisions, rationale, scope, open questions.
-2. **Implementation plan** — _how_ and _in what order_ it gets built. A directory of sprint files with a master progress checklist.
+1. **Design plan** — _what_ the system is. Decisions, rationale, scope, open questions. Lives at the canonical path `<root>/design.md` inside a user-chosen feature root directory.
+2. **Implementation plan** — _how_ and _in what order_ it gets built. A directory of sprint files with a master progress checklist. Lives at the canonical path `<root>/impl/` (a sibling of `design.md`) by default; users can point at a different directory if needed.
 3. **Execution** — actually shipping the code, one step at a time, with a per-step subagent that implements, gets reviewed, and commits.
 
-Each layer has a `create` skill (bootstrap), an `iterate` skill (drive forward another round), and a `review` + `integrate-feedback` pair (agent-based external critique that gets triaged back into the plan). The execute skill is the terminal — it dispatches sprint steps one at a time.
+Each layer has a `create` operation (bootstrap), an `iterate` operation (drive forward another round), and a `review` + `integrate-feedback` pair (agent-based external critique that gets triaged back into the plan). The execute operation is the terminal — it dispatches sprint steps one at a time. All nine operations live inside one `trellis` skill; the agent picks the right one from the user's natural-language invocation.
 
 ---
 
@@ -24,7 +24,7 @@ LLM coding agents have a few well-known failure modes when given an open-ended f
 
 Trellis is the set of guardrails that has worked for me against those failure modes. Concretely:
 
-- Every skill is **manually invoked** (`disable-model-invocation: true`) — the model never decides to start a planning round on its own.
+- The skill is **manually invoked** (`disable-model-invocation: true`) — the model never decides to start a planning round on its own.
 - Every round produces an explicit **completeness assessment** with a verdict (`not-yet-complete` / `substantially-complete` / `complete`), so drift surfaces early.
 - Open questions carry **severity tags** (`[blocks-v1]` / `[blocks-impl]` / `[deferred]` / `[exploratory]`) so the user can grep for what's load-bearing.
 - The decisions log and the body **must agree** — supersession discipline forces stale wording to be purged, not left in place.
@@ -59,7 +59,7 @@ Trellis is **architecture-agnostic**: it works for backend services, frontend ap
 
 - The task is a single-file change, a quick bug fix, or a small refactor — Trellis would be overkill.
 - You're prototyping / exploring and don't want a paper trail.
-- You already have a finished design and just need an agent to bang out the code — skip straight to whatever step-execution loop you prefer; Trellis's planning skills would just be friction.
+- You already have a finished design and just need an agent to bang out the code — skip straight to whatever step-execution loop you prefer; Trellis's planning operations would just be friction.
 - The task fits inside a single Claude Code planning step (`ExitPlanMode`) — the built-in plan mode is lighter weight.
 
 Trellis sits **above** "agent-writes-some-code" and **below** "engineering-team-with-Linear-and-Figma." It's the layer that turns an idea into a sequenced, reviewable build.
@@ -70,27 +70,27 @@ Trellis sits **above** "agent-writes-some-code" and **below** "engineering-team-
 
 ```mermaid
 flowchart TD
-    Start([Idea / feature brief]) --> DC[/trellis-design-create/]
+    Start([Idea / feature brief]) --> DC[design-create]
     DC --> DLoop{Design plan<br/>satisfactory?}
 
-    DLoop -- No, manual iterate --> DI[/trellis-design-iterate/]
+    DLoop -- No, manual iterate --> DI[design-iterate]
     DI --> DLoop
 
-    DLoop -- No, agent review --> DR[/trellis-design-review/]
-    DR --> DIF[/trellis-design-integrate-feedback/]
+    DLoop -- No, agent review --> DR[design-review]
+    DR --> DIF[design-integrate-feedback]
     DIF --> DLoop
 
-    DLoop -- Yes --> IC[/trellis-impl-create/]
+    DLoop -- Yes --> IC[impl-create]
     IC --> ILoop{Implementation plan<br/>satisfactory?}
 
-    ILoop -- No, manual iterate --> II[/trellis-impl-iterate/]
+    ILoop -- No, manual iterate --> II[impl-iterate]
     II --> ILoop
 
-    ILoop -- No, agent review --> IR[/trellis-impl-review/]
-    IR --> IIF[/trellis-impl-integrate-feedback/]
+    ILoop -- No, agent review --> IR[impl-review]
+    IR --> IIF[impl-integrate-feedback]
     IIF --> ILoop
 
-    ILoop -- Yes --> IE[/trellis-impl-execute/]
+    ILoop -- Yes --> IE[impl-execute]
     IE --> IELoop{More sprints<br/>to ship?}
     IELoop -- Yes --> IE
     IELoop -- No --> Done([Feature shipped])
@@ -107,27 +107,47 @@ flowchart TD
 
 ### How to use it (step by step)
 
-1. **Start a design plan.** Invoke `trellis-design-create <output-path>` with a briefing of the feature. Round 1 lands the foundational decisions, scope, cross-references, and an open-questions list — _not_ the schema or API surface.
+Invoke the `trellis` skill in natural language. The skill reads your request, infers which of the nine operations you want, extracts the paths you provided, and loads only the instruction file and spec the operation needs. There are no positional arguments.
+
+**Path conventions.** Both planning artifacts live inside a single user-chosen feature root `<root>`:
+
+- The **design plan** is always at `<root>/design.md`. The user names only the root; the agent appends `design.md`. If the user types a full path ending in `design.md`, the agent treats its parent as the root.
+- The **implementation plan directory** is `<root>/impl/` by default. The user names only the root; the agent appends `impl/`. If the user explicitly names a different directory (one that already contains `overview.md`), that override is honored.
+
+A typical feature layout:
+
+```
+<root>/
+├── design.md          canonical design plan
+└── impl/              canonical implementation plan directory
+    ├── overview.md
+    ├── decisions.md
+    ├── status.md
+    ├── progress.md
+    └── 01-<topic>.md … NN-<topic>.md
+```
+
+1. **Start a design plan.** Name the feature root — e.g., _"Use trellis to start a new design plan at `docs/features/refunds/`. Here's the feature brief…"_. The agent creates `docs/features/refunds/design.md`. Round 1 lands the foundational decisions, scope, cross-references, and an open-questions list — _not_ the schema or API surface.
 
 2. **Iterate the design plan.** Either:
-   - Drive it manually with `trellis-design-iterate <plan-path>`. Each invocation runs one round (1–5 open questions resolved, decisions logged, status updated, completeness assessment emitted).
-   - Get an external agent read with `trellis-design-review <plan-path> <review-output-path>`, then triage the review back into the plan with `trellis-design-integrate-feedback <plan-path> <review-path>`.
-   - You can keep iterating in the same chat session **without re-invoking the skill each turn** — the skill establishes the round discipline, then the conversation continues under it.
+   - Drive it manually — _"Use trellis to iterate the design plan at `docs/features/refunds/`; focus on Q3 and Q7 this round."_ Each round resolves 1–5 open questions, logs decisions, updates status, and emits a completeness assessment.
+   - Get an external agent read — _"Use trellis to review the design plan at `docs/features/refunds/` and save the review to `docs/features/refunds/review-r4.md`."_ Then triage the review back in — _"Use trellis to integrate `docs/features/refunds/review-r4.md` into the design plan at `docs/features/refunds/`."_
+   - You can keep iterating in the same chat session **without re-invoking the skill each turn** — once a round establishes the discipline, the conversation continues under it.
 
 3. **Once the design plan is `complete`** (zero `[blocks-v1]` / `[blocks-impl]` open questions remaining, doc internally clean), graduate to implementation planning.
 
-4. **Bootstrap the implementation plan.** Invoke `trellis-impl-create <design-plan-path> <impl-plan-dir>`. Round 1 produces a directory: `overview.md` (philosophy, sprint roster, dependency graph, feature-wide locked decisions — no Decisions log or Status section), `decisions.md` (plan-level Decisions log — its own top-level file), `status.md` (plan-level round-by-round audit trail — its own top-level file), `progress.md` (master checklist), and one stub file per sprint (`01-<topic>.md`, `02-<topic>.md`, …).
+4. **Bootstrap the implementation plan.** _"Use trellis to bootstrap an implementation plan at `docs/features/refunds/`."_ The agent consumes `docs/features/refunds/design.md` and creates the canonical `docs/features/refunds/impl/` directory containing `overview.md` (philosophy, sprint roster, dependency graph, feature-wide locked decisions — no Decisions log or Status section), `decisions.md` (plan-level Decisions log), `status.md` (plan-level round-by-round audit trail), `progress.md` (master checklist), and one stub file per sprint (`01-<topic>.md`, `02-<topic>.md`, …). To put the impl plan somewhere else, add an explicit path: _"…with the impl plan at `docs/sprint-plans/refunds/`."_
 
 5. **Iterate the implementation plan.** Same shape as design:
-   - `trellis-impl-iterate <impl-plan-dir>` to drive the next round (typically: lock one stub sprint to execution-ready, or resolve a handful of open questions, or re-slice the roster).
-   - `trellis-impl-review <impl-plan-dir> <review-output-path>` then `trellis-impl-integrate-feedback <impl-plan-dir> <review-path>` for an external read.
-   - Same conversational continuation — keep talking after the skill completes; you don't need to re-invoke each turn.
+   - _"Use trellis to iterate the implementation plan at `docs/features/refunds/`; lock Sprint 02 to execution-ready."_ The agent operates on `docs/features/refunds/impl/`. Each round typically locks one stub sprint, resolves a handful of open questions, or re-slices the roster.
+   - _"Use trellis to review the implementation plan at `docs/features/refunds/` and save to `docs/features/refunds/impl-review-r5.md`."_ Then incorporate that review back in.
+   - Same conversational continuation — keep talking after a round completes; you don't need to re-invoke each turn.
 
-6. **Execute sprints, one step at a time.** Once a sprint is execution-ready (Locked Decisions table populated, Implementation Steps with concrete Verification, Step Dependency Chart, Acceptance checklist), invoke `trellis-impl-execute <sprint-file> <from-step> [<to-step>]`. The orchestrator dispatches a per-step subagent that implements, runs verification, gets reviewed by another subagent, addresses the review, commits, and updates Progress. The orchestrator validates the hand-back (clean tree, new commit, Progress checked) and moves to the next step.
+6. **Execute sprints, one step at a time.** Once a sprint is execution-ready (Locked Decisions table populated, Implementation Steps with concrete Verification, Step Dependency Chart, Acceptance checklist), _"Use trellis to execute Sprint 02 step 3 through 5 in `docs/features/refunds/impl/02-manager-core.md`."_ The orchestrator dispatches a per-step subagent that implements, runs verification, gets reviewed by another subagent, addresses the review, commits, and updates Progress. The orchestrator validates the hand-back (clean tree, new commit, Progress checked) and moves to the next step.
 
-### Each command can take inline instructions
+### Each invocation can take inline instructions
 
-Every skill accepts free-text instructions alongside the invocation — they take precedence over the skill's defaults for that run. Examples: _"Focus only on the schema questions this round"_, _"This is a CLI project, ignore the backend examples in the brief"_, _"Don't ask me to confirm framing in Step B, just draft it"_.
+The skill accepts free-text instructions alongside the invocation — they take precedence over the instruction file's defaults for that run. Examples: _"Focus only on the schema questions this round"_, _"This is a CLI project, ignore the backend examples in the brief"_, _"Don't ask me to confirm framing in Step B, just draft it"_.
 
 You can also persist instructions across runs via:
 
@@ -137,38 +157,49 @@ You can also persist instructions across runs via:
 
 ---
 
-## The skills
+## The operations
 
-| Skill                               | Purpose                                                 | Args                                    |
-| ----------------------------------- | ------------------------------------------------------- | --------------------------------------- |
-| `trellis-design-create`             | Bootstrap a design plan (Round 1)                       | `<output-path>`                         |
-| `trellis-design-iterate`            | Drive a design plan one round forward                   | `<plan-path>`                           |
-| `trellis-design-review`             | Agent-based review of a design plan                     | `<plan-path> <review-output-path>`      |
-| `trellis-design-integrate-feedback` | Triage a review back into the design plan               | `<plan-path> <review-path>`             |
-| `trellis-impl-create`               | Bootstrap an implementation plan (Round 1)              | `<design-plan-path> <impl-plan-dir>`    |
-| `trellis-impl-iterate`              | Drive an implementation plan one round forward          | `<impl-plan-dir>`                       |
-| `trellis-impl-review`               | Agent-based review of an implementation plan            | `<impl-plan-dir> <review-output-path>`  |
-| `trellis-impl-integrate-feedback`   | Triage a review back into the implementation plan       | `<impl-plan-dir> <review-path>`         |
-| `trellis-impl-execute`              | Execute a range of sprint steps with per-step subagents | `<sprint-path> <from-step> [<to-step>]` |
+All nine operations live inside the single `trellis` skill. The skill's top-level `SKILL.md` maps the user's natural-language request to the right instruction file under `trellis/instructions/`.
 
-All skills are manually invoked (`disable-model-invocation: true`) — the model never starts a Trellis round on its own.
+| Operation                   | Purpose                                                 | Paths the skill extracts                                              |
+| --------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------- |
+| `design-create`             | Bootstrap a design plan (Round 1)                       | `<root>`                                                              |
+| `design-iterate`            | Drive a design plan one round forward                   | `<root>`                                                              |
+| `design-review`             | Agent-based review of a design plan                     | `<root>`, `<review-output-path>`                                      |
+| `design-integrate-feedback` | Triage a review back into the design plan               | `<root>`, `<feedback-path>`                                           |
+| `impl-create`               | Bootstrap an implementation plan (Round 1)              | `<root>`, optionally `<impl-plan-dir>` (defaults to `<root>/impl/`)   |
+| `impl-iterate`              | Drive an implementation plan one round forward          | `<root>` (→ `<root>/impl/`) or explicit `<impl-plan-dir>`             |
+| `impl-review`               | Agent-based review of an implementation plan            | `<root>` (→ `<root>/impl/`) or `<impl-plan-dir>`, plus `<review-output-path>` |
+| `impl-integrate-feedback`   | Triage a review back into the implementation plan       | `<root>` (→ `<root>/impl/`) or `<impl-plan-dir>`, plus `<feedback-path>`      |
+| `impl-execute`              | Execute a range of sprint steps with per-step subagents | `<sprint-path>`, `<from-step>`, `<to-step>` (optional)                |
+
+For every operation: the design plan is at `<root>/design.md` and the implementation plan directory is `<root>/impl/` by default. The user names only the root; the agent appends `design.md` or `impl/`. An explicit `<impl-plan-dir>` override is honored only when the user clearly names a different directory containing `overview.md`.
+
+The skill is manually invoked (`disable-model-invocation: true`) — the model never starts a Trellis round on its own.
 
 ---
 
 ## Repository layout
 
 ```
-trellis-design-create/         design plan bootstrap + authoring guide
-trellis-design-iterate/        design plan round-by-round driver
-trellis-design-review/         design plan reviewer brief
-trellis-design-integrate-feedback/  triage review into design plan
-
-trellis-impl-create/           impl plan bootstrap + authoring guide
-trellis-impl-iterate/          impl plan round-by-round driver
-trellis-impl-review/           impl plan reviewer brief
-trellis-impl-integrate-feedback/    triage review into impl plan
-
-trellis-impl-execute/          orchestrator + per-step executor + per-step reviewer
+trellis/
+├── SKILL.md                    top-level skill — workflow overview + dispatch
+├── specs/
+│   ├── design-plan.md          design plan authoring guide
+│   └── implementation-plan.md  implementation plan authoring guide
+├── subagents/
+│   ├── step-executor.md        per-step executor subagent brief
+│   └── step-reviewer.md        per-step reviewer subagent brief
+└── instructions/
+    ├── design-create.md
+    ├── design-iterate.md
+    ├── design-review.md
+    ├── design-integrate-feedback.md
+    ├── impl-create.md
+    ├── impl-iterate.md
+    ├── impl-review.md
+    ├── impl-integrate-feedback.md
+    └── impl-execute.md
 ```
 
-The two authoring guides — `trellis-design-create/design-plan.md` and `trellis-impl-create/implementation-plan.md` — are the load-bearing references. Every other skill links back to them.
+The two authoring guides — `trellis/specs/design-plan.md` and `trellis/specs/implementation-plan.md` — are the load-bearing references. Every instruction file under `trellis/instructions/` links back to them. The top-level `trellis/SKILL.md` encourages **lazy loading**: the agent reads only the instruction file the user's request maps to, and only loads the matching spec (`design-plan.md` for design work, `implementation-plan.md` for implementation work) when the operation actually needs it.

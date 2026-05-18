@@ -2,7 +2,7 @@
 
 Instructions for an LLM agent on producing **implementation plan documents**. This guide is the agent-facing brief for collaborating with a human user to produce one of these document sets from scratch — or to drive an existing one forward through another planning round.
 
-The companion document, [design-plan.md](../trellis-design-create/design-plan.md), describes how upstream **design plans** are produced. An implementation plan is the next layer down: it consumes a finished (or in-progress) design plan and turns its decisions into concrete, sequenced engineering work.
+The companion document, [design-plan.md](./design-plan.md), describes how upstream **design plans** are produced. An implementation plan is the next layer down: it consumes a finished (or in-progress) design plan and turns its decisions into concrete, sequenced engineering work.
 
 ---
 
@@ -179,19 +179,21 @@ Use these as guard-rails when sketching the initial roster — and when re-slici
 
 ## Directory layout
 
-The implementation plan lives in a single directory. By convention, the directory is named after the feature/subsystem:
+The implementation plan lives in a single directory. The canonical convention is `<root>/impl/`, a sibling of the feature's `<root>/design.md`. Users can override the location, but `<root>/impl/` is what the trellis skill creates by default:
 
 ```
-.plans/<feature-name>/
-├── overview.md
-├── decisions.md
-├── status.md
-├── progress.md
-├── post-mortem.md         # created lazily; first appears when the first sprint ships
-├── 01-<topic>.md
-├── 02-<topic>.md
-├── …
-├── NN-<topic>.md
+<root>/
+├── design.md              source-of-truth design plan
+└── impl/                  canonical implementation plan directory
+    ├── overview.md
+    ├── decisions.md
+    ├── status.md
+    ├── progress.md
+    ├── post-mortem.md     # created lazily; first appears when the first sprint ships
+    ├── 01-<topic>.md
+    ├── 02-<topic>.md
+    ├── …
+    └── NN-<topic>.md
 ```
 
 Rules:
@@ -218,11 +220,11 @@ Drop sections that don't apply. Add domain-specific sections where the work dema
 # <Feature> — Implementation Plan
 ```
 
-Followed by 1–3 sentences saying what this directory contains and a clear link back to the source design plan:
+Followed by 1–3 sentences saying what this directory contains and a clear link back to the source design plan. Under the canonical `<root>/design.md` + `<root>/impl/` layout, that link is `../design.md`:
 
-> Implementation plan for the [Lab Results & Measurements design plan](../../docs/dev/measurements.md). Read that document end-to-end before picking up Sprint 01 — every sprint assumes its vocabulary.
+> Implementation plan for the [Lab Results & Measurements design plan](../design.md). Read that document end-to-end before picking up Sprint 01 — every sprint assumes its vocabulary.
 
-The link back to the design plan is **not optional**. The design plan is the upstream source of truth; an implementation plan that doesn't cite it is a red flag.
+If the user overrode `<impl-plan-dir>` so it's not a sibling of `design.md`, the link points at the actual design-plan path instead of `../design.md`. Either way: the link back to the design plan is **not optional**. The design plan is the upstream source of truth; an implementation plan that doesn't cite it is a red flag.
 
 ### 2. Philosophy
 
@@ -427,7 +429,7 @@ The compression rule and the round-tag rule apply identically inside any sprint 
 
 ## `status.md` anatomy
 
-`status.md` is the plan-level round-by-round audit trail — the doc's "git log." It is its own top-level file in the plan directory — **not** a section inside `overview.md`. A user resuming the plan via `trellis-impl-iterate` reads the latest entry's `_Next:_` clause to recover where to pick up. Sprint files may additionally carry a sprint-scoped Status / Feedback-incorporated section for round entries that materially changed just that sprint; `status.md` holds the plan-wide narrative.
+`status.md` is the plan-level round-by-round audit trail — the doc's "git log." It is its own top-level file in the plan directory — **not** a section inside `overview.md`. A user resuming the plan via `impl-iterate` reads the latest entry's `_Next:_` clause to recover where to pick up. Sprint files may additionally carry a sprint-scoped Status / Feedback-incorporated section for round entries that materially changed just that sprint; `status.md` holds the plan-wide narrative.
 
 Skeleton:
 
@@ -446,7 +448,7 @@ Skeleton:
 Each entry has two clauses:
 
 1. **What changed.** Summary of resolutions / re-slices / supersessions in this round. Cite supersessions explicitly (`R5 supersedes R3's helper-in-Sprint-06 decision`).
-2. **`_Next:_` clause** — a one-line italic tail naming the recommended next-round focus. Cite Open question IDs + tags + scope when relevant (`overview Q4 [blocks-v1]`, `Sprint 03 Q2 [blocks-impl]`). This persists the between-rounds recommendation into the doc itself, so a user resuming via `trellis-impl-iterate` recovers the prior recommendation without depending on chat history. When the plan is complete, the `_Next:_` clause is `hand off to implementation` (or `run trellis-impl-review first`).
+2. **`_Next:_` clause** — a one-line italic tail naming the recommended next-round focus. Cite Open question IDs + tags + scope when relevant (`overview Q4 [blocks-v1]`, `Sprint 03 Q2 [blocks-impl]`). This persists the between-rounds recommendation into the doc itself, so a user resuming via `impl-iterate` recovers the prior recommendation without depending on chat history. When the plan is complete, the `_Next:_` clause is `hand off to implementation` (or `run impl-review first`).
 
 Examples:
 
@@ -541,7 +543,7 @@ A common Locked Decisions row names files / directories / patterns this sprint s
 
 - **`Avoid in this sprint`** — soft scope guardrail. The sprint's intended work does not edit these surfaces, but minor mechanical changes required to keep the code compiling (a renamed argument that must thread through a call site, an enum case that must be matched, a removed identifier that has to be replaced at the reference) are permitted. The executor records the change as a Deviation and continues.
 
-- **`Banned in this sprint`** — hard scope guardrail. The sprint's design depends on these surfaces staying as they are: a deferred type or field that must not be pre-staged, a schema version that must not bump, a security / authorization layer that must not relax, an explicitly out-of-scope module. Even here, minor mechanical propagation is allowed (and recorded as a Deviation), but anything beyond mechanical — logic edits, new behavior, a different parameter shape, a new field — means the plan is wrong; the executor stops and the user routes to `trellis-impl-iterate`.
+- **`Banned in this sprint`** — hard scope guardrail. The sprint's design depends on these surfaces staying as they are: a deferred type or field that must not be pre-staged, a schema version that must not bump, a security / authorization layer that must not relax, an explicitly out-of-scope module. Even here, minor mechanical propagation is allowed (and recorded as a Deviation), but anything beyond mechanical — logic edits, new behavior, a different parameter shape, a new field — means the plan is wrong; the executor stops and the user routes to `impl-iterate`.
 
 Default to `Avoid` for scope shaping. Reserve `Banned` for the few entries that name a real design / security / planning guardrail. If every entry in the row would be `Avoid`, fold them into "Out of scope" instead — the guardrail row earns its place only when a future executor might plausibly think they should touch the surface and needs a posture cue.
 
@@ -972,7 +974,7 @@ Verdict semantics (relative to the chosen threshold):
 
 - **`not-yet-complete`**: At least one load-bearing item from the threshold's checklist is still open or undecided. The "What's still load-bearing-open" block enumerates the gaps with file + section pointers.
 - **`substantially-complete`**: All load-bearing items at this threshold are decided, but rough edges remain — wording inconsistencies, a `progress.md` ↔ per-sprint Progress mismatch, a Decisions log missing a recent decision's tag, marketing language to purge, an Out-of-scope entry without a forward-link. The plan *could* graduate at this threshold; the user may want to clean up first. The "Top nits" block enumerates them.
-- **`complete`**: Load-bearing items at this threshold are decided *and* the affected files are internally clean. Recommend the next move — usually locking the next sprint, running `trellis-impl-review` for an external check, or handing the plan off to an implementer if `plan-complete`.
+- **`complete`**: Load-bearing items at this threshold are decided *and* the affected files are internally clean. Recommend the next move — usually locking the next sprint, running `impl-review` for an external check, or handing the plan off to an implementer if `plan-complete`.
 
 Calibration:
 

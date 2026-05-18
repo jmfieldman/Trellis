@@ -1,26 +1,29 @@
 ---
-name: trellis-impl-integrate-feedback
+name: impl-integrate-feedback
 description: Integrate Feedback into an Implementation Plan
-argument-hint: <path-to-impl-plan-directory> <feedback-file>
+argument-hint: <root> <feedback-path> | <impl-plan-dir> <feedback-path>
 disable-model-invocation: true
 ---
 
 # Skill — Incorporate review feedback into an implementation plan
 
-You are continuing an in-progress implementation plan by reconciling it against a separate review document. The plan is the living artifact (anatomy and rules described in [Implementation Plan Documents — Authoring Guide](../trellis-impl-create/implementation-plan.md)); the review document is one round of external critique against it. Your job in this invocation is **triage and incorporation**, not full re-design or fresh sprint planning — you are processing the review, not running a fresh planning round.
+You are continuing an in-progress implementation plan by reconciling it against a separate review document. The plan is the living artifact (anatomy and rules described in [Implementation Plan Documents — Authoring Guide](../specs/implementation-plan.md)); the review document is one round of external critique against it. Your job in this invocation is **triage and incorporation**, not full re-design or fresh sprint planning — you are processing the review, not running a fresh planning round.
 
 The implementation plan is a *directory* of files (`overview.md`, sprint files, `progress.md`, optionally `post-mortem.md`), not a single document. Many incorporations touch multiple files; the discipline below treats the directory as a coherent system.
 
 ## Inputs
 
-You will be given two file paths:
+Extract two paths from the user's natural-language invocation:
 
-1. **`<plan-dir>`** — the directory of the implementation plan in progress: $0
-2. **`<feedback-path>`** — a review of that plan: $1
+1. **`<impl-plan-dir>`** — the implementation plan directory. Resolved from one of:
+   - A feature root `<root>` — set `<impl-plan-dir>` to `<root>/impl/`.
+   - A directory the user named explicitly that contains `overview.md` — use that directly.
+   - If neither holds, ask the user and stop.
+2. **`<feedback-path>`** — a review of that plan.
 
 The review is typically organized as: Executive summary, High-level concerns, Cross-sprint coherence, Per-sprint findings (one block per sprint), optional Per-step findings, Substance/authoring-guide deviations, Minor nits, Suggested next-round focus. Each item typically has a *Where*, *Concern*, *Why it matters*, and *Suggested directions* (often a menu of options).
 
-If one of the paths is not provided, tell the user they forgot an argument to this skill invocation, and stop.
+If either is missing, ask the user for it and stop.
 
 ## What you are doing (and not doing)
 
@@ -233,7 +236,7 @@ If the order is wrong (consumer edited before target is renamed), you'll generat
 
 #### Step 3 — After every multi-file incorporation, grep the cluster
 
-Before moving to the next finding, run a literal text search for the *old* canonical wording across the entire directory. Zero hits is the only acceptable result; one or more hits means a consumer was missed. (`grep -rn '<old wording>' <plan-dir>` is the canonical check.) This is the cheapest way to catch silent drift introduced by the incorporation itself.
+Before moving to the next finding, run a literal text search for the *old* canonical wording across the entire directory. Zero hits is the only acceptable result; one or more hits means a consumer was missed. (`grep -rn '<old wording>' <impl-plan-dir>` is the canonical check.) This is the cheapest way to catch silent drift introduced by the incorporation itself.
 
 #### Worked example 1: Prerequisite ↔ Deliverable name drift
 
@@ -293,11 +296,11 @@ When you do incorporate (whether single-file or multi-file):
 - **Edit the relevant body section directly**, in whichever file owns it. Do not leave both old and new wording side-by-side; purge the obsolete phrasing per the authoring guide's supersession rule.
 - **Keep `progress.md` and per-sprint Progress in lockstep.** If a step is renamed, re-ordered, added, or removed, update both surfaces in the same pass. The master `progress.md` wins on conflict; the per-sprint section is reconciled to it (unless the master is the broken one, in which case correct the master).
 - **Add a tagged bullet to the relevant Decisions log** for each material incorporation, using the next round number (`(R<n>)`). Cross-cutting calls go in **`decisions.md`** (the plan-level top-level file — not a section inside `overview.md`); sprint-scoped calls go in the affected sprint file's Decisions log section. For pure typo / wording / structural-cleanup edits, a Decisions-log entry is optional — but for anything that names a call the plan now relies on, log it. Lead with a bold phrase that names the call.
-- **Compress older Decisions-log entries** at every scope this pass touched. Walk both `decisions.md` and the affected sprint files' Decisions log sections; condense any entry that this pass (or an earlier round) has superseded, plus any entry whose details have gone stale. Compressed form: `- **<lead>.** Superseded by R<m>. (R<n>)` — round tag + supersession pointer preserved, rationale paragraph dropped. Keep the last 2–3 rounds and any still-actively-load-bearing entry in full. See [implementation-plan.md § "`decisions.md` anatomy"](../trellis-impl-create/implementation-plan.md). The audit trail survives; only obsolete prose is dropped.
+- **Compress older Decisions-log entries** at every scope this pass touched. Walk both `decisions.md` and the affected sprint files' Decisions log sections; condense any entry that this pass (or an earlier round) has superseded, plus any entry whose details have gone stale. Compressed form: `- **<lead>.** Superseded by R<m>. (R<n>)` — round tag + supersession pointer preserved, rationale paragraph dropped. Keep the last 2–3 rounds and any still-actively-load-bearing entry in full. See [implementation-plan.md § "`decisions.md` anatomy"](../specs/implementation-plan.md). The audit trail survives; only obsolete prose is dropped.
 - **Update Open questions**: remove an entry if the incorporation resolves it (rare in this skill — usually means you should have triaged it as Open question instead); add an entry to the right scope (overview vs. sprint) for each item triaged into the Open-question bucket.
-- **Append exactly one new Status entry** in **`status.md`** for this incorporation pass. Format: `**Round <n>**: incorporated review feedback — <one-line summary spanning the most material edits>; <count> items added to Open questions; <count> items declined. _Next:_ <one-line recommended focus for the next planning round, citing Open question IDs + tags + scope where relevant>.` Round number is the plan's next integer at the plan level (per `status.md`). The `_Next:_` clause persists the recommendation into the doc itself — a user resuming the plan via `trellis-impl-iterate` reads it to recover where to pick up. Typical `_Next:_` patterns: `lock Sprint <NN>`, `resolve overview Q<n> [blocks-v1] before touching Sprint <NN>`, `re-slice Sprints <06>/<07> — seam unstable`, or `hand off to implementation` when no load-bearing items remain. If the incorporation supersedes earlier-round wording in any sprint, call out the supersession explicitly in the same `status.md` line ("R3's helper-in-Sprint-06 wording superseded").
+- **Append exactly one new Status entry** in **`status.md`** for this incorporation pass. Format: `**Round <n>**: incorporated review feedback — <one-line summary spanning the most material edits>; <count> items added to Open questions; <count> items declined. _Next:_ <one-line recommended focus for the next planning round, citing Open question IDs + tags + scope where relevant>.` Round number is the plan's next integer at the plan level (per `status.md`). The `_Next:_` clause persists the recommendation into the doc itself — a user resuming the plan via `impl-iterate` reads it to recover where to pick up. Typical `_Next:_` patterns: `lock Sprint <NN>`, `resolve overview Q<n> [blocks-v1] before touching Sprint <NN>`, `re-slice Sprints <06>/<07> — seam unstable`, or `hand off to implementation` when no load-bearing items remain. If the incorporation supersedes earlier-round wording in any sprint, call out the supersession explicitly in the same `status.md` line ("R3's helper-in-Sprint-06 wording superseded").
 - **Sprint-level Status / Deviations.** If a sprint file has its own Status / "Feedback incorporated" section, append a tagged entry there too for sprint-scoped incorporations (in addition to the entry in `status.md`). If a sprint shipped before this review (its final step is `[x]`), prefer the "Feedback incorporated (post-review)" / "Deviations applied during implementation" surfaces over editing the body of an already-shipped sprint — the shipped code is the source of truth, and the doc captures the divergence rather than pretending it didn't happen.
-- **Compress older Status entries** that no longer carry weight. After appending, walk both `status.md` and any sprint-level Status / Feedback-incorporated logs you just appended to; condense entries whose `_Next:_` clause is long-finished (drop the `_Next:_`) or whose round-summary detail is no longer load-bearing because later rounds superseded it (collapse to `**Round <n>**: <one-clause summary>`). Keep the last 2–3 rounds in full at each scope. Never delete a round outright — round numbering stays contiguous and grep-able. See [implementation-plan.md § "`status.md` anatomy"](../trellis-impl-create/implementation-plan.md). For a *shipped* sprint, leave its older Status / Deviations entries alone — they are part of the historical record of what shipped and are no longer eligible for compression by a planning pass.
+- **Compress older Status entries** that no longer carry weight. After appending, walk both `status.md` and any sprint-level Status / Feedback-incorporated logs you just appended to; condense entries whose `_Next:_` clause is long-finished (drop the `_Next:_`) or whose round-summary detail is no longer load-bearing because later rounds superseded it (collapse to `**Round <n>**: <one-clause summary>`). Keep the last 2–3 rounds in full at each scope. Never delete a round outright — round numbering stays contiguous and grep-able. See [implementation-plan.md § "`status.md` anatomy"](../specs/implementation-plan.md). For a *shipped* sprint, leave its older Status / Deviations entries alone — they are part of the historical record of what shipped and are no longer eligible for compression by a planning pass.
 - **Re-read affected files** after editing to catch wording from earlier rounds that your edits silently invalidated. If you find any, fix them in the same pass and note the supersession in the Status entry.
 - **Preserve cross-file consistency.** If incorporating one review item creates a tension with another part of the plan you didn't touch (a sibling sprint that no longer agrees, a Prerequisite that no longer matches a renamed Deliverable), either resolve it by extending the edit or file the new tension as an Open question. Do not leave the plan internally contradictory.
 - **Honor authoring conventions.** Bold the decision lead in Decisions-log entries. Tag every Decisions-log bullet with `(R<n>)`. Use canonical terms. No marketing words. Identifiers in backticks. Absolute dates only. File paths real, not invented.

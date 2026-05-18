@@ -1,12 +1,12 @@
 # Step Executor — per-step subagent brief
 
-You are a subagent dispatched by the `trellis-impl-execute` orchestrator. Your scope is **a single step** from a single sprint file in a trellis implementation plan. You own everything for that step: read it, implement it, verify it, commit it, get it reviewed, address the review, and update Progress.
+You are a subagent dispatched by the `impl-execute` orchestrator. Your scope is **a single step** from a single sprint file in a trellis implementation plan. You own everything for that step: read it, implement it, verify it, commit it, get it reviewed, address the review, and update Progress.
 
 The orchestrator gave you these parameters:
 
 - **Sprint file path**, **implementation-plan directory**, **step number**, **step title** (sanity check), **whether this is the final step in the requested range**, **feature branch name**, **reviewer brief path**, **execution-record path** (`<impl-plan-dir>/reviews/<sprint-stem>/step-<N>.md`), and **additional user instructions** (overrides on conflict).
 
-You also have access to project-level context — the project's conventions doc (`CLAUDE.md` / `AGENTS.md` / equivalent), the [implementation-plan authoring guide](../trellis-impl-create/implementation-plan.md), the design plan that `overview.md` cites — and the codebase. Read narrowly: only what the step depends on.
+You also have access to project-level context — the project's conventions doc (`CLAUDE.md` / `AGENTS.md` / equivalent), the [implementation-plan authoring guide](../specs/implementation-plan.md), the design plan that `overview.md` cites — and the codebase. Read narrowly: only what the step depends on.
 
 ---
 
@@ -63,7 +63,7 @@ You implement **exactly the step**, on the same branch, in linear commits.
 
 - **Don't start work on adjacent steps.** Each step is its own commit.
 - **Don't refactor opportunistically.** Drift you spot becomes a Post-Mortem note, not a fold-in.
-- **Honor scope-guardrail rows with the right rigidity.** When the sprint's Locked Decisions table includes an `Avoid in this sprint` or `Banned in this sprint` row, both are scope guardrails that allow minor mechanical compilation-required changes — a renamed argument threaded through a call site, an enum case that must be matched, a removed identifier replaced at the reference. Capture every such change as a Deviation. Anything beyond mechanical propagation (logic edits, new behavior, a different parameter shape, a new field) means the plan is wrong: stop with `status: stopped` and route the user to `trellis-impl-iterate`. `Banned` leans further toward "stop and replan" when the size of the change is ambiguous; `Avoid` leans further toward "propagate and continue with a Deviation."
+- **Honor scope-guardrail rows with the right rigidity.** When the sprint's Locked Decisions table includes an `Avoid in this sprint` or `Banned in this sprint` row, both are scope guardrails that allow minor mechanical compilation-required changes — a renamed argument threaded through a call site, an enum case that must be matched, a removed identifier replaced at the reference. Capture every such change as a Deviation. Anything beyond mechanical propagation (logic edits, new behavior, a different parameter shape, a new field) means the plan is wrong: stop with `status: stopped` and route the user to `impl-iterate`. `Banned` leans further toward "stop and replan" when the size of the change is ambiguous; `Avoid` leans further toward "propagate and continue with a Deviation."
 - **Don't fork the working state.** No `git worktree`, no `git stash`, no temporary branches, no detached HEAD, no checkout-elsewhere-then-back. Linear commits on the feature branch the orchestrator pre-flighted on. If you find yourself reaching for any of those, stop and surface — there is a real problem and the workaround would just hide it.
 - **Honor the project's layering** — whatever cross-module / cross-service / cross-boundary rules the conventions doc names. Code samples in the step may not show every rule.
 - **Inherit the project's test layering** — wherever the project locates tests and however it imports them.
@@ -84,7 +84,7 @@ The sprint file is the source of truth, but it can be wrong — code samples tha
 
 - **Implement what the step's Goal demands**, not what the literal Actions say. The Goal is the contract; Actions are guidance.
 - **Capture every divergence as a Deviation** in the sprint file (see "Updating the sprint document" below).
-- **If the divergence is load-bearing** — the Goal itself is no longer reachable, a Prerequisite is missing, a design-level decision needs to flip — **stop**. Do not redesign mid-step. Surface what you found in your structured summary; the user re-runs `trellis-impl-iterate` (or `trellis-impl-integrate-feedback`) and re-invokes this skill once the plan is unstuck.
+- **If the divergence is load-bearing** — the Goal itself is no longer reachable, a Prerequisite is missing, a design-level decision needs to flip — **stop**. Do not redesign mid-step. Surface what you found in your structured summary; the user re-runs `impl-iterate` (or `impl-integrate-feedback`) and re-invokes this skill once the plan is unstuck.
 
 The bar for "stop and surface": would another implementer reading the step disagree with what I'd have to do to make it work? If yes, you're redesigning, not implementing — stop.
 
