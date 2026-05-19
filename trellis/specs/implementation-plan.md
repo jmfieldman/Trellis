@@ -205,8 +205,7 @@ Rules:
 - Sprint files are zero-padded numerically prefixed (`01-`, `02-`, …) so directory order matches execution order. Re-numbering on a re-slice is fine.
 - Sprint file names are `<NN>-<short-kebab-topic>.md` — short enough that the index table reads cleanly, descriptive enough that a `git log` line is meaningful.
 - One file per sprint. Don't split a sprint across two files; if a sprint is too large to fit comfortably in one file, that's a re-slice signal.
-
-> **Note on legacy directories.** Earlier implementation plans in this repo (and the ParentHop precedents) named the overview file `00-overview.md`, and kept the Decisions log + Status sections inside `overview.md`. Going forward the canonical names are `overview.md`, `decisions.md`, and `status.md` as separate top-level files. Existing directories may keep their legacy shape for stability, but new plans follow the split layout.
+- **The overview file is `overview.md` — it is not numbered, not prefixed, not a sprint.** Only sprint files take the `NN-` prefix. Numbered prefixes on `overview.md`, `decisions.md`, `status.md`, `progress.md`, or `post-mortem.md` are wrong.
 
 ---
 

@@ -9,7 +9,20 @@ disable-model-invocation: true
 
 You are the **orchestrator** for executing one or more steps from a sprint file produced by the `impl-create` / `impl-iterate` skills. The sprint file lives inside an implementation-plan directory (anatomy described in [Implementation Plan Documents — Authoring Guide](../specs/implementation-plan.md)).
 
-Your job is **not** to implement the steps yourself in this main conversation. Your job is to:
+## Hard invariant — read this first
+
+**You do not implement steps. Every step in the requested range is dispatched to a per-step subagent via the `Agent` tool.** There are no exceptions:
+
+- Not for "small" or "one-line" steps.
+- Not for steps that only edit Markdown or config.
+- Not when the executor's prior step left context that would be "convenient" to reuse.
+- Not when you are confident you know the answer.
+
+If you find yourself reading source files to plan an implementation, editing code, or running anything beyond the orchestrator's narrow validation commands (`git status`, `git rev-parse`, `git log`, `git ls-files`, `Read` on the sprint / progress files), **stop** — you have left the orchestrator role. Dispatch the subagent instead.
+
+The dispatch-per-step pattern is the entire point of this skill: it keeps the main chat small, gives each step a fresh implementation context, and makes the reviewer's audit meaningful. Self-implementing a step breaks all three.
+
+## What you actually do
 
 1. Parse and validate the invocation arguments.
 2. Run pre-flight checks on the repo state.
@@ -335,6 +348,8 @@ For each, report the offending state precisely (commit SHA, status output, file 
 
 ## Anti-patterns specific to this skill
 
+- **Don't implement steps yourself — ever.** This is the single most common failure mode of this skill. Every step in the range is dispatched to a per-step subagent, regardless of how small, mechanical, or "obvious" the step looks. If you catch yourself thinking "this one is trivial, I'll just do it," you have already broken the skill. Dispatch the subagent. (Restated from the Hard invariant at the top of this file because it gets violated.)
+- **Don't read code, run builds, or run tests in the orchestrator context.** The only files the orchestrator reads are the sprint file (for step titles + Progress) and `progress.md` (for cross-checking). The only commands the orchestrator runs are `git status`, `git rev-parse`, `git log`, and `git ls-files` against the working tree. Anything else belongs to the subagent.
 - **Don't read the sprint file's body content into orchestrator context beyond what's needed for validation.** The whole point of the per-step subagent is to keep implementation detail out of the main chat. The orchestrator only needs the step-number → title map and the Progress checklist.
 - **Don't paraphrase the executor brief in the spawn prompt.** Pass the path; let the subagent read it.
 - **Don't run steps in parallel.** Implementation order matters; commits must be linear.
