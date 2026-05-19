@@ -61,15 +61,19 @@ Before saying anything substantive, internally note:
 
 ### Step 2 — Triage what this round will address
 
-Pick **one** of these focuses (a round that tries to do all of them at once usually bungles cross-sprint coherence):
+Pick **one** of these focuses — but recognize that resolving a single sprint's blocking Open questions and locking that same sprint to execution-ready are the **same focus**, not two. The menu below is about cross-sprint scope, not about stopping points within one sprint's arc:
 
-- **Lock a single sprint to execution-ready.** Take a stub sprint and populate its Locked Decisions (10–25 rows), Architecture notes, Public surface, Implementation Steps with Goal/Actions/Deliverables/Verification, Step Dependency Chart, Acceptance checklist. The most common round shape after Round 1.
+- **Lock a single sprint to execution-ready.** Take a stub sprint, resolve any of its remaining `[blocks-impl]` / `[blocks-v1]` Open questions in the same round, and populate its Locked Decisions (10–25 rows), Architecture notes, Public surface, Implementation Steps with Goal/Actions/Deliverables/Verification, Step Dependency Chart, Acceptance checklist. The most common round shape after Round 1.
 - **Resolve 1–5 overview-level Open questions.** When the questions are reasonably independent and don't snowball.
-- **Resolve 1–5 sprint-level Open questions** within a single sprint.
+- **Resolve sprint-level Open questions for a single sprint — and continue in the same round to lock that sprint** when the resolutions clear the last blocker. The open questions exist precisely so the sprint can be locked; stopping between "questions resolved" and "sprint locked" makes the user re-invoke the skill for ceremony rather than for a decision. See "Aggressive locking" below.
 - **Re-slice the sprint roster.** Splitting / folding / re-numbering sprints. Update `overview.md`'s roster and dependency graph, rename sprint files, regenerate `progress.md`, and call out the supersession in this round's `status.md` entry.
 - **Fix cross-sprint coherence drift.** Prerequisite ↔ Deliverable name mismatches, dependency-graph contradictions, `progress.md` ↔ per-sprint Progress drift.
 
 If the user named a focus, that's the round. Don't expand beyond what they asked for unless you flag the expansion explicitly.
+
+**Aggressive locking.** When this round resolves sprint-level Open questions for Sprint NN, check at the end of Step 4 whether Sprint NN still has any `[blocks-impl]` or `[blocks-v1]` Open questions. If the answer is no, **do not stop and ask permission to continue** — populate the Locked Decisions table, Architecture notes, Public surface (when applicable), Implementation Steps with concrete Verification, Step Dependency Chart, and Acceptance checklist in this same round, then grade the round against `sprint-NN-execution-ready` (not the lesser "questions resolved" threshold). `[exploratory]` and `[deferred]` questions are allowed to survive into a locked sprint — they exist precisely so they don't gate execution. Flag any you carried through in the hand-off so the user can decide whether to close them before implementation.
+
+The brake on aggressive locking: if locking would require inventing answers the design plan and the user haven't given you, **stop and surface the gap as a new Open question** — don't fabricate locked decisions to look productive. The bar is "I have enough information to populate every section honestly," not "the user resolved one question, so I'll write steps regardless." See "Don't fabricate locked decisions" in Posture rules.
 
 ### Step 3 — Frame each choice with alternatives
 
@@ -221,6 +225,8 @@ Calibration:
 
 Don't auto-progress to the next round. Each round is a discrete user-driven step.
 
+"Stop" means the round's threshold (Step 8) has been met — not that the first focus item finished. If this round resolved a sprint's blocking Open questions and you have enough information to lock the sprint, keep going within this round per Step 2's "Aggressive locking" — the round ends at `sprint-NN-execution-ready`, not at "questions resolved." The next round begins when the user picks a new focus (typically the next sprint to lock, or a re-slice).
+
 ---
 
 ## Posture rules (read every round)
@@ -238,6 +244,7 @@ Don't auto-progress to the next round. Each round is a discrete user-driven step
 
 ## Anti-patterns specific to iteration
 
+- **Don't stop after resolving a sprint's blocking Open questions when you have enough information to lock it.** Resolving the questions and writing the Locked Decisions / Architecture notes / Implementation Steps / Step Dependency Chart / Acceptance checklist is one round, not two. Stopping early forces the user to re-invoke the skill just to ask you to do the next obvious thing. The exception is when locking would require inventing answers — then surface the gap as a new Open question instead. See Step 2's "Aggressive locking" guidance.
 - **Don't skip the completeness assessment.** Mandatory every round.
 - **Don't skip the `status.md` entry** when the round was small. Every round earns one entry.
 - **Don't put a Decisions log or Status section inside `overview.md`.** Those live in `decisions.md` and `status.md` at the top level of the plan directory. Any "Decisions log" / "Status" heading inside `overview.md` is a planning bug — move the content out, then delete the heading.
