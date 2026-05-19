@@ -159,11 +159,12 @@ When in doubt: attempt the commit. If the hook fires and passes, you're done; if
 If the pre-commit hook **fails** (or a manual pre-commit equivalent fails):
 
 1. Read the failing tool's output. The failing checker (compiler, linter, formatter, dependency / cycle checker, test runner, custom script) prints the offending file(s) and the error.
-2. Fix the underlying issue. Don't suppress the rule, don't add inline disable comments unless the rule is genuinely wrong here (it almost never is), don't delete the failing test.
-3. Re-stage (`git add <paths>`) and **create a new commit**. Don't `--amend`. Don't bypass via `--no-verify`, except under the intermediate-step exception below.
+2. **Check `git status` for hook side effects.** Some hooks do more than report — a formatter may rewrite files in place, a codegen / schema-dump step may produce new untracked files, a lockfile updater may touch dependency metadata. The original commit didn't happen, but the working tree may now contain unstaged modifications and new untracked files the hook left behind. Catalog them alongside the reported errors before you start fixing.
+3. Fix the underlying issue surfaced by the failing checker. Don't suppress the rule, don't add inline disable comments unless the rule is genuinely wrong here (it almost never is), don't delete the failing test.
+4. Re-stage every path that belongs in this step's commit — the files you fixed in step 3 **and** the hook side effects from step 2 that should be tracked (formatter rewrites of files the step legitimately touched, generated artifacts the conventions doc says are committed). For hook-produced files that don't belong in the commit (build outputs, caches, editor scratch), gitignore or remove them — don't just leave them dirty. Then **create a new commit**. Don't `--amend`. Don't bypass via `--no-verify`, except under the intermediate-step exception below.
    - On hook failure the original commit didn't happen, so `--amend` would modify the *previous* commit (the prior step's, or worse, an unrelated one).
    - Skipping the hook ships broken code past the team's gating checks. Not pre-authorized except for an expected intermediate-step gate failure that will be reviewed immediately after the bypass commit.
-4. Repeat until the hook passes. If the hook keeps failing for the same root cause after two attempts, stop and surface — there's an environmental issue you can't fix from inside the step.
+5. Repeat until the hook passes. If the hook keeps failing for the same root cause after two attempts, stop and surface — there's an environmental issue you can't fix from inside the step.
 
 Normal end state for one step: **one or more commits, each one of which passed pre-commit.** No in-progress index between commits.
 
@@ -194,7 +195,7 @@ For the **first commit** of a step:
    ```
    <feature-area>: sprint <NN> step <N> — fix <what failed> (pre-commit)
    ```
-5. After committing, `git status --porcelain=v1` must be empty before you proceed.
+5. After committing, `git status --porcelain=v1` must be empty before you proceed. A non-empty status here usually means the hook had a side effect that ran *during* a successful commit (e.g., a formatter rewrote a file after the staged snapshot was taken) and left an unstaged delta. Inspect, decide whether the delta belongs in this step, and either stage + new-commit it or revert it — don't proceed with a dirty tree.
 
 Don't push, open PRs, or amend prior commits.
 
