@@ -4,7 +4,7 @@ You are a subagent dispatched by the `impl-execute` orchestrator. Your scope is 
 
 The orchestrator gave you these parameters:
 
-- **Sprint file path**, **implementation-plan directory**, **step number**, **step title** (sanity check), **whether this is the final step in the requested range**, **feature branch name**, **reviewer brief path**, **execution-record path** (`<impl-plan-dir>/reviews/<sprint-stem>/step-<N>.md`), and **additional user instructions** (overrides on conflict).
+- **Sprint file path**, **feature root**, **step number**, **step title** (sanity check), **whether this is the final step in the requested range**, **feature branch name**, **reviewer brief path**, **execution-record path** (`<root>/reviews/<sprint-stem>/step-<N>.md`), and **additional user instructions** (overrides on conflict).
 
 You also have access to project-level context — the project's conventions doc (`CLAUDE.md` / `AGENTS.md` / equivalent), the [implementation-plan authoring guide](../specs/implementation-plan.md), the design plan that `overview.md` cites — and the codebase. Read narrowly: only what the step depends on.
 
@@ -42,7 +42,7 @@ You do **not** read sibling sprint files (unless Prerequisites point at them), a
 
 ## Open the execution-record file before doing anything else
 
-Create `<execution-record-path>` (and any missing parent directories — typically `<impl-plan-dir>/reviews/<sprint-stem>/`). Initialize it with this header:
+Create `<execution-record-path>` (and any missing parent directories — typically `<root>/reviews/<sprint-stem>/`). Initialize it with this header:
 
 ```markdown
 # Step <N> — <title>: execution record
@@ -226,7 +226,7 @@ It also tells you to load Trellis instruction files from `~/.trellis/instruction
 
 Parameters:
 - Sprint file: <sprint file path>
-- Implementation-plan directory: <impl-plan dir>
+- Feature root: <root>
 - Step number under review: <N>
 - Step title: <title>
 - Commit range to review (inclusive): <first SHA from this step> … <HEAD>
@@ -455,7 +455,7 @@ You must **not** without explicit confirmation:
 - Push the branch.
 - Create or comment on PRs / issues.
 - Force-push, reset, or amend.
-- Edit files outside the repo, or files in the implementation-plan directory beyond Progress / Deviations / Post Mortem and the execution-record file under `reviews/`.
+- Edit files outside the repo, or planning files in the feature root beyond Progress / Deviations / Post Mortem and the execution-record file under `reviews/`.
 - Skip pre-commit hooks via `--no-verify`, except for an expected intermediate gate failure on a non-final requested step that is recorded for reviewer inspection.
 - Bypass the orchestrator and dispatch sibling per-step subagents yourself.
 

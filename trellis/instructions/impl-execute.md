@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 # Implementation Plan — Execute Steps Skill
 
-You are the **orchestrator** for executing one or more steps from a sprint file produced by the `impl-create` / `impl-iterate` skills. The sprint file lives inside an implementation-plan directory (anatomy described in [Implementation Plan Documents — Authoring Guide](../specs/implementation-plan.md)).
+You are the **orchestrator** for executing one or more steps from a sprint file produced by the `impl-create` / `impl-iterate` skills. The sprint file lives in the feature root alongside the other implementation-plan files (anatomy described in [Implementation Plan Documents — Authoring Guide](../specs/implementation-plan.md)).
 
 ## Hard invariant — read this first
 
@@ -59,7 +59,7 @@ The orchestrator still enforces a clean working tree, committed execution record
 
 Extract up to three values from the user's natural-language invocation:
 
-- `<sprint-path>` — absolute or repo-relative path to a single sprint file (e.g. `docs/impl-plan/03-payment-refund-pathway.md`).
+- `<sprint-path>` — absolute or repo-relative path to a single sprint file (e.g. `docs/features/refunds/03-payment-refund-pathway.md`).
 - `<from-step>` — first step number (inclusive) to execute, e.g. `3`.
 - `<to-step>` — last step number (inclusive) to execute, e.g. `5`. **Optional.**
 
@@ -116,7 +116,7 @@ The file must clear **both** a structural and a substance bar before you dispatc
 
 If a step in range fails substance, stop and tell the user the step isn't execution-ready; route them to `impl-iterate` to lock it before re-invoking this skill.
 
-Locate the implementation-plan **directory** by taking the parent of `<sprint-path>`. Confirm `overview.md`, `progress.md`, `decisions.md`, and `status.md` exist in that directory; if any are missing, warn the user (do not stop — some plans may be partial — but flag it so the subagent knows). The executor doesn't typically need to read `decisions.md` or `status.md`, but their presence confirms the plan has the expected top-level structure.
+Locate the feature root by taking the parent of `<sprint-path>`. Confirm `overview.md`, `progress.md`, `decisions.md`, and `status.md` exist there; if any are missing, warn the user (do not stop — some plans may be partial — but flag it so the subagent knows). The executor doesn't typically need to read `decisions.md` or `status.md`, but their presence confirms the plan has the expected top-level structure.
 
 ### 4. Identify the steps in range
 
@@ -180,7 +180,7 @@ These pre-checks are cheap insurance against a subagent leaving partial work beh
 
 Use the `Agent` tool with `subagent_type=general-purpose`. Pre-compute one path before spawning:
 
-- **Execution-record path** for this step: `<impl-plan-dir>/reviews/<sprint-stem>/step-<N>.md` where `<sprint-stem>` is the sprint file's basename without the `.md` extension. The executor will create the file (and parent directories) and use it as the durable home for verification output, review rounds, triage decisions, and reviewer-wrong findings. The orchestrator does not create the file — it just passes the path.
+- **Execution-record path** for this step: `<root>/reviews/<sprint-stem>/step-<N>.md` where `<root>` is the sprint file's parent directory and `<sprint-stem>` is the sprint file's basename without the `.md` extension. The executor will create the file (and parent directories) and use it as the durable home for verification output, review rounds, triage decisions, and reviewer-wrong findings. The orchestrator does not create the file — it just passes the path.
 
 The spawn prompt is short and self-contained:
 
@@ -195,13 +195,13 @@ It also tells you to load Trellis instruction files from `~/.trellis/instruction
 
 Parameters for this invocation:
 - Sprint file: <absolute-path-to-sprint-path>
-- Implementation-plan directory: <absolute-path-to-parent-of-sprint-path>
+- Feature root: <absolute-path-to-parent-of-sprint-path>
 - Step number to execute: <N>
 - Step title (for sanity-check against the sprint file): <title from sprint file>
 - Is final step in requested range: <true if N is the last dispatched step in this invocation, else false>
 - Feature branch: <current branch name>
 - Reviewer brief (you will spawn a reviewer subagent yourself): <absolute-path-to-trellis-dir>/subagents/step-reviewer.md
-- Execution-record path: <absolute-path-to-impl-plan-dir>/reviews/<sprint-stem>/step-<N>.md
+- Execution-record path: <absolute-path-to-root>/reviews/<sprint-stem>/step-<N>.md
 
 Additional user instructions (forwarded verbatim from the orchestrator invocation; these override the brief on conflict):
 <paste any free-text instructions the user attached to the trellis invocation, or "(none)" if none>
@@ -282,7 +282,7 @@ Once every step in the requested range has executed successfully:
 3. **Sprint completion check.** If the executed range included the **last** step of the sprint (i.e., every step in the sprint is now `[x]`), surface this to the user as part of the final summary — it's a cue that the user may want to:
    - Run any full lint/test suites.
    - Run any sprint-level Acceptance checklist items the per-step Verification did not cover.
-   - Distill the sprint's inline Post Mortem section into the directory's top-level `post-mortem.md` (per the authoring guide). The orchestrator does **not** do this distillation itself — it's a human / planning-round concern.
+   - Distill the sprint's inline Post Mortem section into the feature root's `post-mortem.md` (per the authoring guide). The orchestrator does **not** do this distillation itself — it's a human / planning-round concern.
 
 4. **Emit the orchestrator summary.** A short report — see "Orchestrator summary format" below.
 

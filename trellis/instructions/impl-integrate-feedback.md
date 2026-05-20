@@ -1,7 +1,7 @@
 ---
 name: impl-integrate-feedback
 description: Integrate Feedback into an Implementation Plan
-argument-hint: <root> <feedback-path> | <impl-plan-dir> <feedback-path>
+argument-hint: <root> <feedback-path>
 disable-model-invocation: true
 ---
 
@@ -9,15 +9,15 @@ disable-model-invocation: true
 
 You are continuing an in-progress implementation plan by reconciling it against a separate review document. The plan is the living artifact (anatomy and rules described in [Implementation Plan Documents — Authoring Guide](../specs/implementation-plan.md)); the review document is one round of external critique against it. Your job in this invocation is **triage and incorporation**, not full re-design or fresh sprint planning — you are processing the review, not running a fresh planning round.
 
-The implementation plan is a *directory* of files (`overview.md`, sprint files, `progress.md`, optionally `post-mortem.md`), not a single document. Many incorporations touch multiple files; the discipline below treats the directory as a coherent system.
+The implementation plan is a set of files directly in the feature root (`overview.md`, sprint files, `progress.md`, optionally `post-mortem.md`), not a single document. Many incorporations touch multiple files; the discipline below treats the feature root as a coherent system.
 
 ## Inputs
 
 Extract two paths from the user's natural-language invocation:
 
-1. **`<impl-plan-dir>`** — the implementation plan directory. Resolved from one of:
-   - A feature root `<root>` — set `<impl-plan-dir>` to `<root>/impl/`.
-   - A directory the user named explicitly that contains `overview.md` — use that directly.
+1. **`<root>`** — the feature root containing both `design.md` and the implementation-plan files. Resolved from one of:
+   - A feature root `<root>` — use that path directly.
+   - A path to `design.md`, `overview.md`, `progress.md`, `decisions.md`, `status.md`, or a sprint file — use its parent directory as `<root>`.
    - If neither holds, ask the user and stop.
 2. **`<feedback-path>`** — a review of that plan.
 
@@ -29,7 +29,7 @@ If either is missing, ask the user for it and stop.
 
 You ARE:
 
-- Reading every file in the plan directory before doing anything else.
+- Reading every implementation-plan file in the feature root before doing anything else.
 - Triaging every distinct review item into one of five buckets: **incorporate**, **minor incorporate**, **open question**, **reviewer-wrong**, or **ignore**.
 - **Verifying every material claim before acting on it** — the reviewer can be confident-but-wrong. See § "Verify before incorporating" below. For impl plan reviews this is especially load-bearing because cross-sprint coherence claims often hinge on the reviewer correctly reading two files at once.
 - Editing the plan's body (`overview.md`, sprint files, `progress.md`), Decisions logs (plan-level `decisions.md` + per-sprint Decisions log sections), Open questions (overview-level + per-sprint), and Status logs (plan-level `status.md` + per-sprint Status / Feedback-incorporated sections) to reflect the incorporations.
@@ -55,7 +55,7 @@ Reviewer agents are confident even when wrong. Impl plan reviews are *especially
 - The reviewer **hallucinated a cross-reference** — they cite `[[wiki/foo]]` or claim "the design plan says X" but the cited source doesn't exist or doesn't establish X.
 - The reviewer **misread project conventions** — they assert `CLAUDE.md` bans Y, but `CLAUDE.md` actually says Y is fine in context Z.
 - The reviewer **counted wrong** — they say "Sprint 06's Implementation Steps lists 8 steps but `progress.md` lists 6," but a quick recount shows both have the same number under different formatting.
-- The reviewer **flagged stale wording that was already purged** — they're reading an older copy of the plan than what's in the directory.
+- The reviewer **flagged stale wording that was already purged** — they're reading an older copy of the plan than what's in the feature root.
 
 A wrong incorporation is asymmetrically expensive in the impl-plan setting: a "fix" applied to the wrong sprint based on a misread cross-sprint claim corrupts that sprint's coherence in a way the next reviewer may not catch. Defaulting toward verification is cheap insurance.
 
@@ -172,7 +172,7 @@ When the review item does not warrant action and is not factually wrong. Possibl
 - The recommendation contradicts the authoring guide (e.g. asking for build-spec specifics in `overview.md`, leaving `(resolved)` tags, adding speculative future-proofing).
 - The recommendation contradicts the project's `CLAUDE.md` / conventions — but verify the convention claim against the actual `CLAUDE.md` before placing the item here. If `CLAUDE.md` says something different from what the reviewer assumed, the bucket is **Reviewer-wrong**, not Ignore.
 - The item is a stylistic preference the plan's existing voice already handles consistently.
-- The item recommends editing the design plan or other files outside the implementation plan directory (surface it as an out-of-scope action in the report).
+- The item recommends editing code, configs, conventions files, or other files outside the implementation-plan docs in the feature root (surface it as an out-of-scope action in the report).
 
 > Note: "the reviewer misread the plan" or "the reviewer flagged a contradiction that isn't one" are **not** Ignore reasons — those are Reviewer-wrong findings. Use the right bucket so the user gets the signal.
 
@@ -191,10 +191,10 @@ Default to **Minor incorporate** when the item is a *wording / consistency / sta
 A healthy impl-plan triage is roughly:
 
 - **10–25% Incorporate (full)** — material edits that earn a Decisions-log entry (cross-cutting calls in `decisions.md`; sprint-scoped calls in the affected sprint file's Decisions log section), including adopted reviewer recommendations on shape questions. This bucket runs heavier than under the old posture — that is intended.
-- **40–60% Minor incorporate** — cross-sprint coherence fixes plus the usual mechanical fixes (typos, marketing-language purges, missing forward-links, stale wording, numbering, `progress.md` ↔ per-sprint Progress reconciliation). This bucket still runs heaviest for impl plans because the directory-of-files shape produces many seam-drift findings, most of which are mechanical.
+- **40–60% Minor incorporate** — cross-sprint coherence fixes plus the usual mechanical fixes (typos, marketing-language purges, missing forward-links, stale wording, numbering, `progress.md` ↔ per-sprint Progress reconciliation). This bucket still runs heaviest for impl plans because the multi-file shape produces many seam-drift findings, most of which are mechanical.
 - **5–15% Open question** — only the genuinely-needs-a-human residue: shape questions where the reviewer's recommendation didn't survive scrutiny, the trade-offs are truly balanced, required information is missing, or the fix is a re-slicing / promotion-demotion planning move. If this bucket is large, you are probably being too conservative — re-check that you adopted every sound recommendation.
 - **0–10% Reviewer-wrong** — a small but non-zero rate is normal, especially on cross-file coherence claims (the highest-error category for reviewer agents). A rate above ~20% is a signal that the review itself should be re-run rather than triaged; surface this to the user.
-- **5–15% Ignore** — duplicate / out-of-scope / over-engineering / authoring-guide-contradicting / stylistic / out-of-directory items.
+- **5–15% Ignore** — duplicate / out-of-scope / over-engineering / authoring-guide-contradicting / stylistic / non-planning-doc items.
 
 Combined Incorporate + Minor incorporate is typically 50–85%.
 
@@ -232,11 +232,11 @@ The canonical-wording change lands first; consumers follow. Specifically:
 3. **Update `overview.md`** if the change crosses a structural surface (module-tree, sprint roster, dependency graph, feature-wide locked decisions).
 4. **Update `progress.md` and the per-sprint Progress section together** — never one without the other. Master `progress.md` wins on conflict; reconcile the per-sprint copy to it (unless the master is the broken side, in which case fix the master).
 
-If the order is wrong (consumer edited before target is renamed), you'll generate a window where both old and new wording exist in the directory simultaneously — and any incomplete pass through the cluster leaves the plan in that broken state.
+If the order is wrong (consumer edited before target is renamed), you'll generate a window where both old and new wording exist in the plan simultaneously — and any incomplete pass through the cluster leaves the plan in that broken state.
 
 #### Step 3 — After every multi-file incorporation, grep the cluster
 
-Before moving to the next finding, run a literal text search for the *old* canonical wording across the entire directory. Zero hits is the only acceptable result; one or more hits means a consumer was missed. (`grep -rn '<old wording>' <impl-plan-dir>` is the canonical check.) This is the cheapest way to catch silent drift introduced by the incorporation itself.
+Before moving to the next finding, run a literal text search for the *old* canonical wording across the feature root. Zero hits is the only acceptable result; one or more hits means a consumer was missed. (`grep -rn '<old wording>' <root>` is the canonical check.) This is the cheapest way to catch silent drift introduced by the incorporation itself.
 
 #### Worked example 1: Prerequisite ↔ Deliverable name drift
 
@@ -254,7 +254,7 @@ Order:
 3. Update Sprint 04's Prerequisites list.
 4. Update `overview.md`'s dependency-graph edge label, if it named the helper.
 5. Update any Sprint 02 step heading or `progress.md` row that referenced the old name.
-6. Grep the directory for the rejected name. Zero hits expected.
+6. Grep the feature root for the rejected name. Zero hits expected.
 
 #### Worked example 2: a sprint adds a file the overview's module-tree doesn't predict
 
@@ -267,7 +267,7 @@ File cluster:
 Order:
 1. Add the file to `overview.md`'s tree.
 2. Confirm Sprint 03's name for the file matches exactly (canonical wording lives in the sprint that ships it, since the sprint is closer to the actual code).
-3. Grep the directory for any other reference to the same module — sometimes a downstream sprint references the file too.
+3. Grep the feature root for any other reference to the same module — sometimes a downstream sprint references the file too.
 
 #### Worked example 3: `progress.md` ↔ per-sprint Progress drift
 
@@ -285,7 +285,7 @@ Order:
 
 #### Authorization scope on multi-file edits
 
-A multi-file edit touches more files but does *not* expand the skill's authorization. Edits stay within the named plan directory. If the cluster names a file outside the directory (the source design plan, a sibling doc, code), surface that in the report as an out-of-directory action — do not act on it.
+A multi-file edit touches more files but does *not* expand the skill's authorization. Edits stay within the implementation-plan docs in the feature root. If the cluster names code, configs, conventions files, or another non-planning file, surface that in the report as an out-of-scope action — do not act on it.
 
 ---
 
@@ -295,7 +295,7 @@ When you do incorporate (whether single-file or multi-file):
 
 - **Edit the relevant body section directly**, in whichever file owns it. Do not leave both old and new wording side-by-side; purge the obsolete phrasing per the authoring guide's supersession rule.
 - **Keep `progress.md` and per-sprint Progress in lockstep.** If a step is renamed, re-ordered, added, or removed, update both surfaces in the same pass. The master `progress.md` wins on conflict; the per-sprint section is reconciled to it (unless the master is the broken one, in which case correct the master).
-- **Add a tagged bullet to the relevant Decisions log** for each material incorporation, using the next round number (`(R<n>)`). Cross-cutting calls go in **`decisions.md`** (the plan-level top-level file — not a section inside `overview.md`); sprint-scoped calls go in the affected sprint file's Decisions log section. For pure typo / wording / structural-cleanup edits, a Decisions-log entry is optional — but for anything that names a call the plan now relies on, log it. Lead with a bold phrase that names the call.
+- **Add a tagged bullet to the relevant Decisions log** for each material incorporation, using the next round number (`(R<n>)`). Cross-cutting calls go in the feature root's **`decisions.md`** (not a section inside `overview.md`); sprint-scoped calls go in the affected sprint file's Decisions log section. For pure typo / wording / structural-cleanup edits, a Decisions-log entry is optional — but for anything that names a call the plan now relies on, log it. Lead with a bold phrase that names the call.
 - **Compress older Decisions-log entries** at every scope this pass touched. Walk both `decisions.md` and the affected sprint files' Decisions log sections; condense any entry that this pass (or an earlier round) has superseded, plus any entry whose details have gone stale. Compressed form: `- **<lead>.** Superseded by R<m>. (R<n>)` — round tag + supersession pointer preserved, rationale paragraph dropped. Keep the last 2–3 rounds and any still-actively-load-bearing entry in full. See [implementation-plan.md § "`decisions.md` anatomy"](../specs/implementation-plan.md). The audit trail survives; only obsolete prose is dropped.
 - **Update Open questions**: remove an entry if the incorporation resolves it (rare in this skill — usually means you should have triaged it as Open question instead); add an entry to the right scope (overview vs. sprint) for each item triaged into the Open-question bucket.
 - **Append exactly one new Status entry** in **`status.md`** for this incorporation pass. Format: `**Round <n>**: incorporated review feedback — <one-line summary spanning the most material edits>; <count> items added to Open questions; <count> items declined. _Next:_ <one-line recommended focus for the next planning round, citing Open question IDs + tags + scope where relevant>.` Round number is the plan's next integer at the plan level (per `status.md`). The `_Next:_` clause persists the recommendation into the doc itself — a user resuming the plan via `impl-iterate` reads it to recover where to pick up. Typical `_Next:_` patterns: `lock Sprint <NN>`, `resolve overview Q<n> [blocks-v1] before touching Sprint <NN>`, `re-slice Sprints <06>/<07> — seam unstable`, or `hand off to implementation` when no load-bearing items remain. If the incorporation supersedes earlier-round wording in any sprint, call out the supersession explicitly in the same `status.md` line ("R3's helper-in-Sprint-06 wording superseded").
@@ -322,19 +322,19 @@ When you ignore:
 
 ## Authorization scope for this skill
 
-This skill edits an implementation plan in place — across `overview.md`, `decisions.md`, `status.md`, every sprint file, `progress.md`, and (when present) `post-mortem.md` within the named directory. That is the explicit purpose, so you do not need additional confirmation for body edits, `decisions.md` / sprint Decisions-log additions, Open-questions additions, `status.md` / sprint Status appends, or `progress.md` reconciliation *within the named plan directory*. You **do** need confirmation before:
+This skill edits an implementation plan in place — across `overview.md`, `decisions.md`, `status.md`, every sprint file, `progress.md`, and (when present) `post-mortem.md` within the feature root. That is the explicit purpose, so you do not need additional confirmation for body edits, `decisions.md` / sprint Decisions-log additions, Open-questions additions, `status.md` / sprint Status appends, or `progress.md` reconciliation *within those implementation-plan docs*. You **do** need confirmation before:
 
-- Editing any file outside the named plan directory (including the source design plan, sibling docs, or project-level conventions files).
-- Renaming files within the directory (sprint file renames, overview-file renames, etc. — propose, don't act).
+- Editing `design.md`, code, configs, sibling docs, or project-level conventions files.
+- Renaming plan files (sprint file renames, overview-file renames, etc. — propose, don't act).
 - Re-slicing the sprint roster (splitting a file, folding two files together, re-numbering). These are planning-round moves; surface them in the report or as Open questions instead.
-- Touching code, schemas, migrations, or anything outside the plan directory.
+- Touching code, schemas, migrations, or anything outside the implementation-plan docs in the feature root.
 - Creating `post-mortem.md` if no sprint has shipped yet (the file appears the first time a sprint ships, not at triage time). If a review item asks for a `post-mortem.md` entry but no sprint has shipped, decline it and explain.
 
-If a review item recommends changes outside the plan directory, treat those as Open questions or surface them in the final chat report; do not act on them.
+If a review item recommends changes outside the implementation-plan docs in the feature root, treat those as Open questions or surface them in the final chat report; do not act on them.
 
 ## Workflow
 
-1. **Read every file in the plan directory, end-to-end.** No skimming. `overview.md` first; then `decisions.md`; then `status.md`; then `progress.md`; then each sprint file in numeric order; then `post-mortem.md` if present. Note the plan's current Round count in `status.md`, the latest Decisions-log round tags (in `decisions.md` and in each sprint's Decisions log section), the current Open-questions numbering at each scope, and which sprints have shipped per `progress.md`.
+1. **Read every implementation-plan file in the feature root, end-to-end.** No skimming. `overview.md` first; then `decisions.md`; then `status.md`; then `progress.md`; then each sprint file in numeric order; then `post-mortem.md` if present. Note the plan's current Round count in `status.md`, the latest Decisions-log round tags (in `decisions.md` and in each sprint's Decisions log section), the current Open-questions numbering at each scope, and which sprints have shipped per `progress.md`.
 2. **Read the review document end-to-end.** Note its overall structure and which sections you'll process.
 3. **Enumerate the review items.** Most reviews are already itemized (numbered concerns / nits). Treat each numbered item as one unit. If a review item bundles multiple sub-points, split it into sub-units before triaging — each sub-unit gets its own bucket. Per-sprint and per-step findings are each their own units.
 4. **First-pass triage** each unit into incorporate / minor-incorporate / open-question / ignore. Keep a running internal table: `unit-id, source section, target file(s), bucket, one-line rationale`. Note when an incorporation will require multi-file edits. Reviewer-wrong is a *result* of verification (Step 5), not a first-pass call.
@@ -345,12 +345,12 @@ If a review item recommends changes outside the plan directory, treat those as O
 9. **Update Decisions logs** with one bullet per *material* incorporation (Incorporate bucket only; Minor incorporates do not earn entries), all tagged with the same new round number. Cross-cutting bullets go in `decisions.md`; sprint-scoped bullets go in the affected sprint file's Decisions log section. Sprint-level entries can use the same round number even though the sprint file's prior round count may differ — what matters is that *this incorporation pass* is one coherent round.
 10. **Update `progress.md`** if any step structure changed. Reconcile each affected sprint's per-sprint Progress section with the master.
 11. **Append the `status.md` entry** as the last edit. If any sprint had its own Status / Feedback-incorporated section updated, those are already in place from step 7.
-12. **Re-read the directory** end-to-end one more time, looking for: stale wording your edits orphaned across files; Decisions-log bullets that contradict body edits in a sibling file; Open-questions entries your edits silently resolved; numbering inconsistencies; cross-sprint references that broke (a Prerequisite that names a Deliverable you renamed; a forward-link to a sprint whose section you re-titled). Fix what you find inside the same round.
+12. **Re-read the feature root's implementation-plan files** end-to-end one more time, looking for: stale wording your edits orphaned across files; Decisions-log bullets that contradict body edits in a sibling file; Open-questions entries your edits silently resolved; numbering inconsistencies; cross-sprint references that broke (a Prerequisite that names a Deliverable you renamed; a forward-link to a sprint whose section you re-titled). Fix what you find inside the same round.
 13. **Report back to the user** in chat (format below).
 
 ## Report format
 
-Output the bucket-distribution summary first, then five sections (Incorporated, Added to Open questions, Reviewer-wrong, Declined, Out-of-directory actions surfaced), in this order, in chat. Keep each one terse — bullets, not paragraphs. Group bullets by file or by sprint when the volume warrants it.
+Output the bucket-distribution summary first, then five sections (Incorporated, Added to Open questions, Reviewer-wrong, Declined, Non-planning actions surfaced), in this order, in chat. Keep each one terse — bullets, not paragraphs. Group bullets by file or by sprint when the volume warrants it.
 
 **Bucket distribution**: `<I> material / <m> minor / <O> open-question / <W> reviewer-wrong / <X> ignore` (totals to the review's item count).
 
@@ -377,11 +377,11 @@ If the section is empty, omit it.
 
 A bulleted summary of review items you ignored (excluding Reviewer-wrong, which has its own section). Each bullet: the review item (short reference) + a one-sentence reason. Be honest — if you declined multiple items for the same reason, group them.
 
-### Out-of-directory actions surfaced (optional)
+### Non-planning actions surfaced (optional)
 
-Only if the review recommended changes outside the plan directory (edits to the design plan, code, configs, conventions files, sprint-roster re-slicing, file renames). Each bullet: the action + which file / decision it affects + that you did **not** perform it. Omit this section entirely if there are none.
+Only if the review recommended changes outside the implementation-plan docs in the feature root (edits to the design plan, code, configs, conventions files, sprint-roster re-slicing, file renames). Each bullet: the action + which file / decision it affects + that you did **not** perform it. Omit this section entirely if there are none.
 
-End with one sentence naming the new Round number you wrote in `status.md` and (if any) cross-file or cross-directory actions you flagged but did not perform.
+End with one sentence naming the new Round number you wrote in `status.md` and (if any) cross-file or non-planning actions you flagged but did not perform.
 
 ## Tone
 

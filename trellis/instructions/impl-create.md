@@ -1,7 +1,7 @@
 ---
 name: impl-create
 description: Create a new Implementation Plan
-argument-hint: <root> [<impl-plan-dir>]
+argument-hint: <root>
 disable-model-invocation: true
 ---
 
@@ -15,9 +15,9 @@ This skill stops at the end of Round 1. Subsequent rounds (fleshing out individu
 
 ## What this skill produces
 
-A new directory at `<impl-plan-dir>`, containing:
+Implementation-plan files directly in `<root>`, alongside `design.md`:
 
-- `overview.md` — populated framing, philosophy, locked feature-wide decisions, sprint roster + dependency graph, initial Open Questions. **No Decisions log or Status section inside `overview.md`** — those are separate top-level files.
+- `overview.md` — populated framing, philosophy, locked feature-wide decisions, sprint roster + dependency graph, initial Open Questions. **No Decisions log or Status section inside `overview.md`** — those live directly in the feature root as `decisions.md` and `status.md`.
 - `decisions.md` — the plan-level (cross-cutting) Decisions log. Starts empty or with `(R1)`-tagged entries capturing the slicing decisions agreed in Round 1.
 - `status.md` — the plan-level round-by-round audit trail. Starts with a single `**Round 1**: scaffolding + sprint roster + open questions enumerated. _Next:_ …` entry.
 - `progress.md` — master checklist scaffolded with one section per sprint (steps left blank or as best-effort placeholders).
@@ -31,17 +31,16 @@ The implementation plan is **not** complete after Round 1. Step-level detail, Ar
 
 ## Required inputs
 
-One or two paths are needed, extracted from the user's natural-language invocation:
+One path is needed, extracted from the user's natural-language invocation:
 
 - `<root>` — the feature root directory. The agent consumes the design plan at `<root>/design.md`. If the user gave a path ending in `design.md`, treat its parent directory as `<root>`.
-- `<impl-plan-dir>` — **optional.** The directory in which to create the implementation plan. **Defaults to `<root>/impl/`** if the user doesn't override it. Only honor an explicit override when the user names a different path; otherwise use the default.
 
 If `<root>` is missing, ask for it and stop. If `<root>/design.md` does not exist, stop and report the missing file.
 
 Before starting, the agent must have:
 
 1. **The design plan.** Read end to end. The agent must know its vocabulary, foundational decisions (numbered if Shape A; prose if Shape B), Scope / Non-Goals, Schema, Lifecycle sections, API surface, Cross-service contracts, Privacy/Auth, Open questions, and Decisions log.
-2. **The output path** for the implementation plan directory. Create this directory if it doesn't exist.
+2. **The output path** for the implementation plan files. Create `<root>` if it doesn't exist.
 3. **The implementation plan specification.** Read [implementation-plan.md](../specs/implementation-plan.md) before producing any files — the document anatomy, file naming, and section ordering rules in that spec are mandatory.
 4. **Project context.** Skim the project's `CLAUDE.md`, `AGENTS.md` (or equivalent) so the locked decisions in `overview.md` reflect actual project conventions (test framework, schema-edit authorization, migration policy, idempotency keys, logging, etc.). Don't restate the conventions section verbatim — pin the things every sprint will inherit and link to the project doc for the rest.
 5. **(If they exist) one or more analogue implementation plans in the repo or adjacent repos.** Borrowing structure from a precedent is encouraged — naming conventions, locked-decisions tables, sprint-roster format. Cite the analogue in your Round 1 entry in `status.md` so the user can see the lineage.
@@ -87,15 +86,15 @@ Ask the user: does this slicing match their mental model? Are there sprints they
 
 **Iterate on the slicing in conversation before writing files.** A bad slicing means re-shaping every file in Round 2; getting it close in Round 1 saves churn.
 
-### Step C — Scaffold the directory
+### Step C — Scaffold files directly in `<root>`
 
-Once slicing is agreed, create the directory and the five required artifact types (`overview.md`, `decisions.md`, `status.md`, `progress.md`, one stub per sprint). See [implementation-plan.md § "Directory layout"](../specs/implementation-plan.md) for the canonical file list.
+Once slicing is agreed, create the five required artifact types directly in `<root>` (`overview.md`, `decisions.md`, `status.md`, `progress.md`, one stub per sprint). See [implementation-plan.md § "Root layout"](../specs/implementation-plan.md) for the canonical file list.
 
 #### `overview.md`
 
 Populate every section the implementation plan spec lists, scaled to what's actually known in Round 1:
 
-- **Title & framing block** — link back to the design plan. When `<impl-plan-dir>` is the canonical `<root>/impl/`, that link is `../design.md`; otherwise use the actual design-plan path.
+- **Title & framing block** — link back to the design plan at `./design.md`.
 - **Philosophy** — adapt the design plan's tone. Common subsections: "The plan is the source of truth," "Tier-0-aware but never tier-0-locked" (or the project's equivalent), "Cross-service contract over internal cleverness," "Test the cross-service seams hardest," "Small, shippable sprints." Crib language from analogue plans where appropriate; tighten to this feature's specifics.
 - **Architectural invariants the sprints uphold** — restate from the design plan's foundational decisions and the project's `CLAUDE.md`. Be exhaustive about invariants every sprint must verify when touched. The list is project-specific (backend examples: no cross-schema FKs, no peer calls inside DB transactions, append-only constraints. Frontend examples: no direct DOM manipulation outside the renderer, no `any` in public component props. Inherit, don't invent).
 - **Module / directory layout impact** — a code-block tree showing what the codebase looks like at the end of the plan. Note that this is forward-looking; subsequent rounds will tighten file-level detail per sprint.
@@ -109,7 +108,7 @@ Populate every section the implementation plan spec lists, scaled to what's actu
 - **What this plan does *not* try to do** — short list at overview level, distinct from per-sprint Out of scope.
 - **How to read each sprint** — the standard one-paragraph blurb pointing at the sprint anatomy. Mention that cross-cutting decisions live in `decisions.md` and the round-by-round audit trail lives in `status.md`.
 
-> **Do not add a Decisions log or Status section inside `overview.md`.** Those are separate top-level files (`decisions.md`, `status.md`) — see below.
+> **Do not add a Decisions log or Status section inside `overview.md`.** Those live directly in the feature root as `decisions.md` and `status.md` — see below.
 
 #### `decisions.md`
 
@@ -177,7 +176,7 @@ Subsequent rounds replace each placeholder with the actual step checklist as tha
 
 ### Step C.5 — Sanity-check / cross-link before hand-off
 
-Before sending the user the hand-off message, walk the directory you just produced and verify:
+Before sending the user the hand-off message, walk the implementation-plan files you just produced directly in `<root>` and verify:
 
 - **Each sprint ships something observable.** No sprint's Deliverables list is empty or aspirational ("we'll figure it out").
 - **Out-of-scope is forward-linked.** Every "deferred to Sprint NN" entry corresponds to an actual sprint NN whose Deliverables list owns the item.
@@ -234,7 +233,7 @@ What's explicitly *not* expected after Round 1:
 
 After the scaffold is written, message the user along these lines:
 
-> Round 1 scaffold landed at `<impl-plan-dir>` (the canonical `<root>/impl/`, unless overridden):
+> Round 1 scaffold landed in `<root>` alongside `design.md`:
 > - `overview.md` (philosophy, sprint roster, dependency graph, feature-wide locked decisions, open questions — no Decisions log or Status section)
 > - `decisions.md` (plan-level Decisions log — empty / R1 entries only)
 > - `status.md` (plan-level Status log — Round 1 entry)

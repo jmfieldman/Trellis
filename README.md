@@ -5,7 +5,7 @@ A single, manually-invoked Claude Code / Codex skill for taking an engineering f
 Trellis splits the work into three layers, each with its own discipline:
 
 1. **Design plan** — _what_ the system is. Decisions, rationale, scope, open questions. Lives at the canonical path `<root>/design.md` inside a user-chosen feature root directory.
-2. **Implementation plan** — _how_ and _in what order_ it gets built. A directory of sprint files with a master progress checklist. Lives at the canonical path `<root>/impl/` (a sibling of `design.md`) by default; users can point at a different directory if needed.
+2. **Implementation plan** — _how_ and _in what order_ it gets built. A set of files directly in the feature root, with sprint files and a master progress checklist. Lives directly in `<root>` alongside `design.md`.
 3. **Execution** — actually shipping the code, one step at a time, with a per-step subagent that implements, gets reviewed, and commits.
 
 Each layer has a `create` operation (bootstrap), an `iterate` operation (drive forward another round), and a `review` + `integrate-feedback` pair (agent-based external critique that gets triaged back into the plan). The execute operation is the terminal — it dispatches sprint steps one at a time. All nine operations live inside one `trellis` skill; the agent picks the right one from the user's natural-language invocation.
@@ -112,19 +112,18 @@ Invoke the `trellis` skill in natural language. The skill reads your request, in
 **Path conventions.** Both planning artifacts live inside a single user-chosen feature root `<root>`:
 
 - The **design plan** is always at `<root>/design.md`. The user names only the root; the agent appends `design.md`. If the user types a full path ending in `design.md`, the agent treats its parent as the root.
-- The **implementation plan directory** is `<root>/impl/` by default. The user names only the root; the agent appends `impl/`. If the user explicitly names a different directory (one that already contains `overview.md`), that override is honored.
+- The **implementation plan files** live directly in `<root>` alongside `design.md`. The user names the feature root for implementation operations.
 
 A typical feature layout:
 
 ```
 <root>/
-├── design.md          canonical design plan
-└── impl/              canonical implementation plan directory
-    ├── overview.md
-    ├── decisions.md
-    ├── status.md
-    ├── progress.md
-    └── 01-<topic>.md … NN-<topic>.md
+├── design.md
+├── overview.md
+├── decisions.md
+├── status.md
+├── progress.md
+└── 01-<topic>.md … NN-<topic>.md
 ```
 
 1. **Start a design plan.** Name the feature root — e.g., _"Use trellis to start a new design plan at `docs/features/refunds/`. Here's the feature brief…"_. The agent creates `docs/features/refunds/design.md`. Round 1 lands the foundational decisions, scope, cross-references, and an open-questions list — _not_ the schema or API surface.
@@ -136,14 +135,14 @@ A typical feature layout:
 
 3. **Once the design plan is `complete`** (zero `[blocks-v1]` / `[blocks-impl]` open questions remaining, doc internally clean), graduate to implementation planning.
 
-4. **Bootstrap the implementation plan.** _"Use trellis to bootstrap an implementation plan at `docs/features/refunds/`."_ The agent consumes `docs/features/refunds/design.md` and creates the canonical `docs/features/refunds/impl/` directory containing `overview.md` (philosophy, sprint roster, dependency graph, feature-wide locked decisions — no Decisions log or Status section), `decisions.md` (plan-level Decisions log), `status.md` (plan-level round-by-round audit trail), `progress.md` (master checklist), and one stub file per sprint (`01-<topic>.md`, `02-<topic>.md`, …). To put the impl plan somewhere else, add an explicit path: _"…with the impl plan at `docs/sprint-plans/refunds/`."_
+4. **Bootstrap the implementation plan.** _"Use trellis to bootstrap an implementation plan at `docs/features/refunds/`."_ The agent consumes `docs/features/refunds/design.md` and creates `overview.md` (philosophy, sprint roster, dependency graph, feature-wide locked decisions — no Decisions log or Status section), `decisions.md` (plan-level Decisions log), `status.md` (plan-level round-by-round audit trail), `progress.md` (master checklist), and one stub file per sprint (`01-<topic>.md`, `02-<topic>.md`, …) directly in `docs/features/refunds/`.
 
 5. **Iterate the implementation plan.** Same shape as design:
-   - _"Use trellis to iterate the implementation plan at `docs/features/refunds/`; lock Sprint 02 to execution-ready."_ The agent operates on `docs/features/refunds/impl/`. Each round typically locks one stub sprint, resolves a handful of open questions, or re-slices the roster.
+   - _"Use trellis to iterate the implementation plan at `docs/features/refunds/`; lock Sprint 02 to execution-ready."_ The agent operates on the implementation files in `docs/features/refunds/`. Each round typically locks one stub sprint, resolves a handful of open questions, or re-slices the roster.
    - _"Use trellis to review the implementation plan at `docs/features/refunds/` and save to `docs/features/refunds/impl-review-r5.md`."_ Then incorporate that review back in.
    - Same conversational continuation — keep talking after a round completes; you don't need to re-invoke each turn.
 
-6. **Execute sprints, one step at a time.** Once a sprint is execution-ready (Locked Decisions table populated, Implementation Steps with concrete Verification, Step Dependency Chart, Acceptance checklist), _"Use trellis to execute Sprint 02 step 3 through 5 in `docs/features/refunds/impl/02-manager-core.md`."_ The orchestrator dispatches a per-step subagent that implements, runs verification, gets reviewed by another subagent, addresses the review, commits, and updates Progress. The orchestrator validates the hand-back (clean tree, new commit, Progress checked) and moves to the next step.
+6. **Execute sprints, one step at a time.** Once a sprint is execution-ready (Locked Decisions table populated, Implementation Steps with concrete Verification, Step Dependency Chart, Acceptance checklist), _"Use trellis to execute Sprint 02 step 3 through 5 in `docs/features/refunds/02-manager-core.md`."_ The orchestrator dispatches a per-step subagent that implements, runs verification, gets reviewed by another subagent, addresses the review, commits, and updates Progress. The orchestrator validates the hand-back (clean tree, new commit, Progress checked) and moves to the next step.
 
 ### Each invocation can take inline instructions
 
@@ -167,13 +166,13 @@ All nine operations live inside the single `trellis` skill. The skill's top-leve
 | `design-iterate`            | Drive a design plan one round forward                   | `<root>`                                                              |
 | `design-review`             | Agent-based review of a design plan                     | `<root>`, `<review-output-path>`                                      |
 | `design-integrate-feedback` | Triage a review back into the design plan               | `<root>`, `<feedback-path>`                                           |
-| `impl-create`               | Bootstrap an implementation plan (Round 1)              | `<root>`, optionally `<impl-plan-dir>` (defaults to `<root>/impl/`)   |
-| `impl-iterate`              | Drive an implementation plan one round forward          | `<root>` (→ `<root>/impl/`) or explicit `<impl-plan-dir>`             |
-| `impl-review`               | Agent-based review of an implementation plan            | `<root>` (→ `<root>/impl/`) or `<impl-plan-dir>`, plus `<review-output-path>` |
-| `impl-integrate-feedback`   | Triage a review back into the implementation plan       | `<root>` (→ `<root>/impl/`) or `<impl-plan-dir>`, plus `<feedback-path>`      |
+| `impl-create`               | Bootstrap an implementation plan (Round 1)              | `<root>`                                                              |
+| `impl-iterate`              | Drive an implementation plan one round forward          | `<root>`                                                              |
+| `impl-review`               | Agent-based review of an implementation plan            | `<root>`, plus `<review-output-path>`                                 |
+| `impl-integrate-feedback`   | Triage a review back into the implementation plan       | `<root>`, plus `<feedback-path>`                                      |
 | `impl-execute`              | Execute a range of sprint steps with per-step subagents | `<sprint-path>`, `<from-step>`, `<to-step>` (optional)                |
 
-For every operation: the design plan is at `<root>/design.md` and the implementation plan directory is `<root>/impl/` by default. The user names only the root; the agent appends `design.md` or `impl/`. An explicit `<impl-plan-dir>` override is honored only when the user clearly names a different directory containing `overview.md`.
+For every operation: the design plan is at `<root>/design.md`, and the implementation plan files also live in `<root>`. If the user names `design.md`, `overview.md`, `progress.md`, `decisions.md`, `status.md`, or a sprint file, the agent treats that file's parent as `<root>`.
 
 The skill is manually invoked (`disable-model-invocation: true`) — the model never starts a Trellis round on its own.
 

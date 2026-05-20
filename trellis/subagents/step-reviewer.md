@@ -11,13 +11,13 @@ You are **not** the author. You do not edit code. You do not run tests. You do n
 ## Inputs the executor passed you
 
 - **Sprint file path** — the absolute path to the sprint markdown file.
-- **Implementation-plan directory** — the parent directory.
+- **Feature root** — the sprint file's parent directory.
 - **Step number** under review (e.g. `4`).
 - **Step title** — for sanity-check only.
 - **Commit range** to review — typically `<first SHA from this step>..HEAD`. The executor may also have given you a `git diff` command to run.
 - **Feature branch name**.
 - **Round number** (`1` or `2`) — which review pass this is.
-- **Output-file path** — the absolute path to the per-step execution-record file (`<impl-plan-dir>/reviews/<sprint-stem>/step-<N>.md`). The executor pre-created the file and may have already written sections above where your output lands. You append your review section to the end (see "Output destination" below).
+- **Output-file path** — the absolute path to the per-step execution-record file (`<root>/reviews/<sprint-stem>/step-<N>.md`). The executor pre-created the file and may have already written sections above where your output lands. You append your review section to the end (see "Output destination" below).
 - **Whether this is the final step in the requested range**.
 - **Additional user instructions** — overrides on conflict.
 

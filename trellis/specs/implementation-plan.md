@@ -8,12 +8,12 @@ The companion document, [design-plan.md](./design-plan.md), describes how upstre
 
 ## What these documents are
 
-An **implementation plan** is a directory of markdown files describing how a design plan will actually be built. It is the substrate a junior engineer (or an agent) consumes to ship the feature with minimal intervention — every architectural decision should already be made, every non-obvious pattern should already be explained, and every gotcha should already be flagged.
+An **implementation plan** is a set of markdown files in the feature root describing how a design plan will actually be built. It is the substrate a junior engineer (or an agent) consumes to ship the feature with minimal intervention — every architectural decision should already be made, every non-obvious pattern should already be explained, and every gotcha should already be flagged.
 
 The motto: **optimize for so much rigor up front that implementation has nothing left to debate.** When a step requires the implementer to make a decision the doc didn't make, that's a planning failure, not a feature. Lock the decision, surface it as an Open Question, or name the future sprint that closes it — never punt the call into the code.
 
 An implementation plan IS:
-- A directory of files (not a single document) — one **overview**, N **sprint plans**, and a master **progress checklist**.
+- A set of files directly in the feature root (not a single document) — one **overview**, N **sprint plans**, and a master **progress checklist**.
 - A high-fidelity translation of the design plan's decisions into ordered work units.
 - A sprint-by-sprint sequencing where each sprint depends only on prior sprints.
 - A step-by-step breakdown within each sprint, where each step is a self-contained semantic unit of work and steps form a small dependency graph.
@@ -56,7 +56,7 @@ Examples throughout this spec lean on a backend-service shape (schemas, reposito
 - An OpenAPI sync becomes an SDK type-export sync, a GraphQL SDL update, a CLI man-page regeneration, or no spec at all.
 - A "no peer-service calls inside a transaction" invariant becomes whatever the project's analogous "don't do X across the Y boundary" rules are.
 
-The structural advice in this guide (Goal → Prerequisites → Deliverables → Locked Decisions → Architecture notes → Steps → Verification; per-sprint Progress mirrored in a top-level `progress.md`; living-during-execution Deviations log) holds in every case. The *content* of those sections must reflect the actual project the agent is working in.
+The structural advice in this guide (Goal → Prerequisites → Deliverables → Locked Decisions → Architecture notes → Steps → Verification; per-sprint Progress mirrored in the feature root's `progress.md`; living-during-execution Deviations log) holds in every case. The *content* of those sections must reflect the actual project the agent is working in.
 
 If the project lacks an obvious analogue for a section the spec describes (e.g., no public API surface; no schema; no async workers), drop the section. If the project has surfaces this spec doesn't enumerate, add them. **Adapt to the codebase. Don't bend the codebase to fit the examples in this spec.**
 
@@ -68,11 +68,11 @@ If the project lacks an obvious analogue for a section the spec describes (e.g.,
 
 Like design plans, implementation plans are produced through repeated conversation rounds with a human collaborator. Each round resolves a small number of open questions, updates the affected files, and (where helpful) appends an entry to the plan-level `decisions.md` / `status.md` files or to a sprint-scoped log inside a sprint file. The agent should never try to "finish" the plan in one pass — the rounds keep cognitive load low and make trade-offs visible.
 
-**Where the logs live.** Plan-level (cross-cutting) decisions and the round-by-round audit trail live in their **own top-level files** in the plan directory: `decisions.md` and `status.md`. They are **not** sections inside `overview.md`. Each sprint file may additionally carry its own sprint-scoped Decisions log section (for calls that affect only that sprint) and an optional sprint-scoped Status / Feedback-incorporated section (for round entries that materially changed just that sprint). The split is deliberate: `decisions.md` and `status.md` are the plan's single-page indexes for "what got decided across the whole feature" and "how did this plan get here"; per-sprint logs are the local record inside the sprint that owns them.
+**Where the logs live.** Plan-level (cross-cutting) decisions and the round-by-round audit trail live directly in the feature root as `decisions.md` and `status.md`. They are **not** sections inside `overview.md`. Each sprint file may additionally carry its own sprint-scoped Decisions log section (for calls that affect only that sprint) and an optional sprint-scoped Status / Feedback-incorporated section (for round entries that materially changed just that sprint). The split is deliberate: `decisions.md` and `status.md` are the plan's single-page indexes for "what got decided across the whole feature" and "how did this plan get here"; per-sprint logs are the local record inside the sprint that owns them.
 
 A round generally goes:
 
-1. **Read the entire plan**, every file in the directory, before saying anything. The overview frames the philosophy; each sprint encodes a slice; the progress file shows what's been completed. Don't rely on prior conversation context.
+1. **Read the entire plan**, every implementation-plan file in the feature root, before saying anything. The overview frames the philosophy; each sprint encodes a slice; the progress file shows what's been completed. Don't rely on prior conversation context.
 2. **Triage Open Questions** — pick 1 to ~5 questions that can plausibly be resolved in this round without spawning many more.
 3. **Surface alternatives clearly** to the user — present 2–3 viable options for each question with trade-offs, recommend one, and let the user pick or redirect.
 4. **Update the affected files** for each resolution:
@@ -84,13 +84,13 @@ A round generally goes:
 6. **Purge obsolete prose.** When a decision invalidates earlier wording, delete the old wording — don't leave both versions side-by-side.
 7. **Append a Status entry** for the round summarizing what changed — to the plan-level **`status.md`**, and (when a single sprint was materially changed) optionally to that sprint file's sprint-scoped Status / Feedback-incorporated section.
 8. **Ensure internal consistency.** Rewriting one sprint may leak inconsistency into adjacent sprints (a new dependency, a deferred concern, a renamed helper). Either fix the consequence in the same round or add a note to Open questions for next round.
-9. **Emit a completeness assessment to chat** at the end of the round (see § "Round-end completeness assessment"). This is the agent's recommendation on how close the directory is to "the next sprint can be picked up cold and shipped," what's still load-bearing-open, and which nits the user may want to resolve before handing the plan off to an implementer.
+9. **Emit a completeness assessment to chat** at the end of the round (see § "Round-end completeness assessment"). This is the agent's recommendation on how close the plan is to "the next sprint can be picked up cold and shipped," what's still load-bearing-open, and which nits the user may want to resolve before handing the plan off to an implementer.
 
 ### Round 1 — scaffolding
 
 Round 1 is initiated by a human pointing the agent at a design plan and (usually) sketching the high-level slicing they have in mind. The first round produces the skeleton, not the fully-detailed plan:
 
-- The implementation plan **directory** is created.
+- The implementation-plan files are created in the feature root.
 - `overview.md` is drafted — title, framing, link back to the source design plan, philosophy, locked feature-wide decisions, sprint roster (titles + one-line outcomes), dependency graph. **No Decisions log or Status section inside `overview.md`** — those live in `decisions.md` and `status.md`.
 - `decisions.md` is initialized — usually empty, or with `(R1)`-tagged entries capturing the slicing decisions agreed in Round 1.
 - `status.md` is initialized with a single Round 1 entry: `**Round 1**: scaffolding + sprint roster + open questions enumerated. _Next:_ <recommended Round 2 focus>.`
@@ -177,23 +177,22 @@ Use these as guard-rails when sketching the initial roster — and when re-slici
 
 ---
 
-## Directory layout
+## Root layout
 
-The implementation plan lives in a single directory. The canonical convention is `<root>/impl/`, a sibling of the feature's `<root>/design.md`. Users can override the location, but `<root>/impl/` is what the trellis skill creates by default:
+The implementation plan lives directly in the feature root, alongside the source design plan:
 
 ```
 <root>/
 ├── design.md              source-of-truth design plan
-└── impl/                  canonical implementation plan directory
-    ├── overview.md
-    ├── decisions.md
-    ├── status.md
-    ├── progress.md
-    ├── post-mortem.md     # created lazily; first appears when the first sprint ships
-    ├── 01-<topic>.md
-    ├── 02-<topic>.md
-    ├── …
-    └── NN-<topic>.md
+├── overview.md
+├── decisions.md
+├── status.md
+├── progress.md
+├── post-mortem.md         # created lazily; first appears when the first sprint ships
+├── 01-<topic>.md
+├── 02-<topic>.md
+├── …
+└── NN-<topic>.md
 ```
 
 Rules:
@@ -202,7 +201,7 @@ Rules:
 - `status.md` is required. It is the plan-level round-by-round audit trail — the doc's "git log." Sprint-scoped Status / Feedback-incorporated entries continue to live inside their sprint files; `status.md` holds the plan-wide narrative. See "`status.md` anatomy" for the format.
 - `progress.md` is required. It is the master checklist that humans scan to see "what's done."
 - `post-mortem.md` is created the first time a sprint's final step is checked off — not at scaffold time. It accrues a distilled, sprint-keyed entry per shipped sprint. See "`post-mortem.md` anatomy" for the format.
-- Sprint files are zero-padded numerically prefixed (`01-`, `02-`, …) so directory order matches execution order. Re-numbering on a re-slice is fine.
+- Sprint files are zero-padded numerically prefixed (`01-`, `02-`, …) so filename order matches execution order. Re-numbering on a re-slice is fine.
 - Sprint file names are `<NN>-<short-kebab-topic>.md` — short enough that the index table reads cleanly, descriptive enough that a `git log` line is meaningful.
 - One file per sprint. Don't split a sprint across two files; if a sprint is too large to fit comfortably in one file, that's a re-slice signal.
 - **The overview file is `overview.md` — it is not numbered, not prefixed, not a sprint.** Only sprint files take the `NN-` prefix. Numbered prefixes on `overview.md`, `decisions.md`, `status.md`, `progress.md`, or `post-mortem.md` are wrong.
@@ -219,11 +218,11 @@ Drop sections that don't apply. Add domain-specific sections where the work dema
 # <Feature> — Implementation Plan
 ```
 
-Followed by 1–3 sentences saying what this directory contains and a clear link back to the source design plan. Under the canonical `<root>/design.md` + `<root>/impl/` layout, that link is `../design.md`:
+Followed by 1–3 sentences saying what this plan contains and a clear link back to the source design plan. Because `overview.md` and `design.md` both live directly in the feature root, that link is `./design.md`:
 
-> Implementation plan for the [Lab Results & Measurements design plan](../design.md). Read that document end-to-end before picking up Sprint 01 — every sprint assumes its vocabulary.
+> Implementation plan for the [Lab Results & Measurements design plan](./design.md). Read that document end-to-end before picking up Sprint 01 — every sprint assumes its vocabulary.
 
-If the user overrode `<impl-plan-dir>` so it's not a sibling of `design.md`, the link points at the actual design-plan path instead of `../design.md`. Either way: the link back to the design plan is **not optional**. The design plan is the upstream source of truth; an implementation plan that doesn't cite it is a red flag.
+The link back to the design plan is **not optional**. The design plan is the upstream source of truth; an implementation plan that doesn't cite it is a red flag.
 
 ### 2. Philosophy
 
@@ -384,13 +383,13 @@ A short bulleted list at the overview level so individual sprint "Out of scope" 
 
 A one-paragraph summary of the sprint anatomy and a pointer at "the design plan is the source of truth on any conflict." Also note where the logs live: cross-cutting Decisions and the round-by-round Status are in `decisions.md` and `status.md`; sprint-scoped decisions and (optional) sprint-scoped Status entries are inside the sprint file itself.
 
-> **`overview.md` does not contain a Decisions log or a Status section.** Those are top-level files in the plan directory (`decisions.md`, `status.md`) — see the next two sections for their anatomy.
+> **`overview.md` does not contain a Decisions log or a Status section.** Those live directly in the feature root as `decisions.md` and `status.md` — see the next two sections for their anatomy.
 
 ---
 
 ## `decisions.md` anatomy
 
-`decisions.md` is the plan-level (cross-cutting) Decisions log. It is its own top-level file in the plan directory — **not** a section inside `overview.md`. A returning collaborator opens `decisions.md` to recover "what got decided across the whole feature, and when." Sprint-scoped Decisions logs continue to live inside their sprint files; `decisions.md` holds only cross-cutting calls (the calls every sprint would otherwise re-litigate).
+`decisions.md` is the plan-level (cross-cutting) Decisions log. It lives directly in the feature root — **not** as a section inside `overview.md`. A returning collaborator opens `decisions.md` to recover "what got decided across the whole feature, and when." Sprint-scoped Decisions logs continue to live inside their sprint files; `decisions.md` holds only cross-cutting calls (the calls every sprint would otherwise re-litigate).
 
 Skeleton:
 
@@ -428,7 +427,7 @@ The compression rule and the round-tag rule apply identically inside any sprint 
 
 ## `status.md` anatomy
 
-`status.md` is the plan-level round-by-round audit trail — the doc's "git log." It is its own top-level file in the plan directory — **not** a section inside `overview.md`. A user resuming the plan via `impl-iterate` reads the latest entry's `_Next:_` clause to recover where to pick up. Sprint files may additionally carry a sprint-scoped Status / Feedback-incorporated section for round entries that materially changed just that sprint; `status.md` holds the plan-wide narrative.
+`status.md` is the plan-level round-by-round audit trail — the doc's "git log." It lives directly in the feature root — **not** as a section inside `overview.md`. A user resuming the plan via `impl-iterate` reads the latest entry's `_Next:_` clause to recover where to pick up. Sprint files may additionally carry a sprint-scoped Status / Feedback-incorporated section for round entries that materially changed just that sprint; `status.md` holds the plan-wide narrative.
 
 Skeleton:
 
@@ -700,7 +699,7 @@ Per-step deviations between the original plan and what shipped, captured inline 
 
 After-the-fact notes that don't affect the contract but are worth preserving — naming-convention drift, a partially-mitigated risk, a follow-up worth filing. These are stylistic / non-actionable observations that future maintainers benefit from but that don't gate sprint acceptance.
 
-**Distillation into `post-mortem.md`.** When the sprint's final step is checked off (i.e., the sprint ships), distill this section into a sprint-keyed entry in the directory's top-level `post-mortem.md`. Create the file if it doesn't yet exist; otherwise append a new section for this sprint. The inline Post Mortem section in the sprint file remains the authoritative long-form record; `post-mortem.md` is the cross-sprint reading surface so reviewers can scan all post mortems in one place without opening every sprint file. The distillation lands in the same PR that ships the sprint's final step. See "`post-mortem.md` anatomy" below.
+**Distillation into `post-mortem.md`.** When the sprint's final step is checked off (i.e., the sprint ships), distill this section into a sprint-keyed entry in the feature root's `post-mortem.md`. Create the file if it doesn't yet exist; otherwise append a new section for this sprint. The inline Post Mortem section in the sprint file remains the authoritative long-form record; `post-mortem.md` is the cross-sprint reading surface so reviewers can scan all post mortems in one place without opening every sprint file. The distillation lands in the same PR that ships the sprint's final step. See "`post-mortem.md` anatomy" below.
 
 ---
 
@@ -859,7 +858,7 @@ export const measurementTypes = schema.table('measurement_types', {
 - **Don't paraphrase the design plan into one giant sprint.** Re-derive sprint structure from outcomes (what ships when), not from chapter headings of the design plan. A sprint roster that mirrors the design plan's section list isn't slicing — it's re-titling.
 - **Don't bury the layer-vs-boundary error-mapping decision.** Domain errors live in the inner layer; user-facing-code mapping lives at the boundary. The boundary step documents the mapping table explicitly. (In a backend service: managers throw, resources map to HTTP. In a CLI: the engine throws, the command-handler maps to exit codes. Adapt.)
 - **Don't ship a sprint's final step without distilling its Post Mortem into `post-mortem.md`.** The cross-sprint reading surface is load-bearing for future maintainers; skipping the distillation forces them to grep every sprint file. If the sprint genuinely has nothing post-mortem-worthy, append the heading with `_No post-mortem-worthy observations._` — silent omission is the failure mode, not a bare bullet.
-- **Don't pre-create `post-mortem.md` at scaffold time.** The file appears the first time a sprint ships. An empty `post-mortem.md` in a Round 1 directory is noise.
+- **Don't pre-create `post-mortem.md` at scaffold time.** The file appears the first time a sprint ships. An empty `post-mortem.md` in Round 1 is noise.
 
 ---
 
@@ -867,7 +866,7 @@ export const measurementTypes = schema.table('measurement_types', {
 
 ### Continuing an existing implementation plan
 
-1. **Read the entire directory, end to end.** `overview.md`, `decisions.md`, `status.md`, `progress.md`, every sprint file, and `post-mortem.md` if it exists. Identify Open questions (overview-level + sprint-level), recent `decisions.md` entries (plus sprint-scoped Decisions logs), and the most recent `status.md` round.
+1. **Read the feature root's implementation-plan files, end to end.** `overview.md`, `decisions.md`, `status.md`, `progress.md`, every sprint file, and `post-mortem.md` if it exists. Identify Open questions (overview-level + sprint-level), recent `decisions.md` entries (plus sprint-scoped Decisions logs), and the most recent `status.md` round.
 2. **Pick 1–3 questions or 1 sprint** to focus this round. Prefer questions whose resolutions are reasonably independent.
 3. **For each, frame the choice** for the user: 2–3 viable options with trade-offs, your recommendation, and one sentence on what gets unblocked by the answer.
 4. **After the user answers**, update the affected files:
@@ -880,7 +879,7 @@ export const measurementTypes = schema.table('measurement_types', {
 
 ### Starting a new implementation plan
 
-The bootstrap workflow — taking a finished design plan and producing the initial scaffold — is captured in [design-to-impl.md](./design-to-impl.md). That document is the agent-facing brief for Round 1 specifically.
+The bootstrap workflow — taking a finished design plan and producing the initial scaffold — is captured in [`../instructions/impl-create.md`](../instructions/impl-create.md). That instruction file is the agent-facing brief for Round 1 specifically.
 
 ### What to do when the user doesn't know
 
@@ -893,7 +892,7 @@ The bootstrap workflow — taking a finished design plan and producing the initi
 Re-slicing is normal. When it happens:
 
 - Update `overview.md`'s sprint roster, dependency graph, and any rationale paragraphs that reference the old shape.
-- Rename / split / fold sprint files. Renumber if the directory ordering would otherwise lie about execution order.
+- Rename / split / fold sprint files. Renumber if the file ordering would otherwise lie about execution order.
 - Update `progress.md` to reflect the new structure.
 - Add a Status entry **to `status.md`**: "Round 4: re-sliced 06 into 06-resolve-type and 07-deduplicate; re-numbered 07–10 → 08–11. R3's combined-worker decision superseded."
 - Cross-references in adjacent sprints get updated in the same round.
@@ -902,14 +901,14 @@ Re-slicing is normal. When it happens:
 
 ## Round-end completeness assessment
 
-After every round (including Round 1), the agent emits a completeness assessment to chat. This is **not** part of any file in the directory — it's a chat-only recommendation that helps the user decide whether to keep iterating, run an external review, or hand the plan off to an implementer.
+After every round (including Round 1), the agent emits a completeness assessment to chat. This is **not** part of any plan file — it's a chat-only recommendation that helps the user decide whether to keep iterating, run an external review, or hand the plan off to an implementer.
 
 The assessment is the agent's honest read on the plan's state. It is allowed to be opinionated; the user is allowed to disagree. Do not pad the "complete" verdict to be polite, and do not list every minor wording quirk to look thorough.
 
 Implementation plans differ from design plans in two important ways for completeness:
 
-1. **Implementation plans are a directory of files**, not a single doc. "Complete" requires every required file to be present and consistent with the others.
-2. **Implementation plans are sequential by design**. Sprint 01 may be execution-ready while Sprint 06 is still a stub — that's normal and not a defect. The completeness assessment grades the directory's *current readiness for the next unshipped sprint*, not the readiness of every file equally.
+1. **Implementation plans are a set of files directly in the feature root**, not a single doc. "Complete" requires every required file to be present and consistent with the others.
+2. **Implementation plans are sequential by design**. Sprint 01 may be execution-ready while Sprint 06 is still a stub — that's normal and not a defect. The completeness assessment grades the plan's *current readiness for the next unshipped sprint*, not the readiness of every file equally.
 
 ### When an implementation plan is "complete enough"
 
@@ -918,8 +917,8 @@ There are three different "complete enough" thresholds; the assessment picks the
 **Scaffold-complete** — Round 1 has just landed:
 
 - `overview.md` is populated per the spec — title, framing, philosophy, architectural invariants, module/directory layout, cross-sprint conventions, sprint organization rationale, sprint roster (with one-line outcomes), dependency graph, feature-wide locked decisions table, out-of-scope across all sprints, open questions, what this plan does *not* try to do, how to read each sprint. **No Decisions log or Status section inside `overview.md`.**
-- `decisions.md` exists at the top level of the plan directory — empty, or with `(R1)`-tagged entries capturing slicing decisions agreed in Round 1.
-- `status.md` exists at the top level of the plan directory with a single entry: `**Round 1**: scaffolding + sprint roster + open questions enumerated. _Next:_ …`.
+- `decisions.md` exists directly in the feature root — empty, or with `(R1)`-tagged entries capturing slicing decisions agreed in Round 1.
+- `status.md` exists directly in the feature root with a single entry: `**Round 1**: scaffolding + sprint roster + open questions enumerated. _Next:_ …`.
 - One stub sprint file per roster entry, each with at least Goal, Prerequisites, Deliverables (best-effort first cut), Out of scope (forward-linked to owner sprints), and Open questions.
 - `progress.md` has one section per sprint, no step bullets yet.
 - No `post-mortem.md` (it's created lazily when the first sprint ships).
@@ -945,7 +944,7 @@ There are three different "complete enough" thresholds; the assessment picks the
 - `decisions.md` and `status.md` are coherent with every sprint file's sprint-scoped Decisions / Status sections — round numbering consistent, supersessions paired with body edits, no orphaned references.
 - Tone and conventions clean — no marketing words, no design-level rationale leaking into sprints, no implementation-spec specifics leaking up to the overview.
 
-If the round didn't aim at a specific sprint (e.g., it was a feedback-incorporation round across many files), grade against whichever threshold the directory's overall state best matches.
+If the round didn't aim at a specific sprint (e.g., it was a feedback-incorporation round across many files), grade against whichever threshold the plan's overall state best matches.
 
 ### What to emit after each round
 
@@ -981,7 +980,7 @@ Calibration:
 - **Don't oscillate.** If round N said `substantially-complete` at the same threshold and round N+1 only changed a comment, the verdict shouldn't drop back to `not-yet-complete`.
 - **Cross-sprint coherence is load-bearing at every threshold above scaffold-complete.** A Prerequisite that names a Deliverable spelled differently in a prior sprint is a load-bearing-open item, not a nit.
 - **Don't pad either side.** A 3-bullet "load-bearing-open" list is a real list. A 12-bullet "top nits" list is a sign the plan is not actually substantially-complete — promote the most material items into "load-bearing-open" and re-grade.
-- **Cite the file + section.** Every bullet names the file *and* the section so the user can navigate (`Sprint 04 § Locked Decisions`, `overview.md § Dependency graph`, `progress.md § Sprint 06`). Bare-section references are too ambiguous in a directory of files.
+- **Cite the file + section.** Every bullet names the file *and* the section so the user can navigate (`Sprint 04 § Locked Decisions`, `overview.md § Dependency graph`, `progress.md § Sprint 06`). Bare-section references are too ambiguous across multiple files.
 - **One block per round.** Don't emit multiple completeness assessments in the same round; the user reads the latest as authoritative.
 
 This assessment is the agent's recommendation, not a gate. The user decides when to graduate. But the assessment forces the agent to take a position each round, which surfaces drift before it compounds across sprint files.
@@ -998,7 +997,7 @@ A sprint is "execution-ready" when a junior engineer can:
 4. After each step, mark its checkbox `[x]` in **both** the per-sprint Progress section **and** the master `progress.md`. (Or just the master if the per-sprint section has been removed for compactness — but typically both.)
 5. Record any Deviations applied during implementation **in the same PR** that ships the divergence — top-of-doc list for cross-cutting deltas, inline `### Step N deviations` subsection for granular ones.
 6. After the last step, walk the Acceptance checklist; only when every box is `[x]` is the sprint shippable.
-7. In the same PR that checks off the final step, distill the sprint's Post Mortem section into a sprint-keyed entry in the directory's `post-mortem.md` (creating the file if it doesn't yet exist). If there's nothing post-mortem-worthy, the entry is a single `_No post-mortem-worthy observations._` bullet — don't omit the sprint heading.
+7. In the same PR that checks off the final step, distill the sprint's Post Mortem section into a sprint-keyed entry in the feature root's `post-mortem.md` (creating the file if it doesn't yet exist). If there's nothing post-mortem-worthy, the entry is a single `_No post-mortem-worthy observations._` bullet — don't omit the sprint heading.
 
 If the engineer hits a question the sprint doc doesn't answer:
 

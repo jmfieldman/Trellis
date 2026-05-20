@@ -1,7 +1,7 @@
 ---
 name: impl-iterate
 description: Iterate on an Implementation Plan
-argument-hint: <root> | <impl-plan-dir>
+argument-hint: <root>
 disable-model-invocation: true
 ---
 
@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 Skill prompt for an LLM agent. Activated when a user wants to drive an existing **implementation plan** through one more planning round (Round 2 onward).
 
-The implementation plan is a **directory** of markdown files (`overview.md`, `decisions.md`, `status.md`, `progress.md`, sprint files, optionally `post-mortem.md`), not a single document. **`decisions.md` and `status.md` are top-level files — not sections inside `overview.md`.** Most planning failures hide in the seams between files — every rule in this prompt is calibrated to keep those seams coherent.
+The implementation plan is a **set of markdown files directly in the feature root** (`overview.md`, `decisions.md`, `status.md`, `progress.md`, sprint files, optionally `post-mortem.md`), not a single document. **`decisions.md` and `status.md` live directly in the feature root — not as sections inside `overview.md`.** Most planning failures hide in the seams between files — every rule in this prompt is calibrated to keep those seams coherent.
 
 The round mechanics below are **load-bearing** and easy to drop under load. Read the prompt end-to-end every invocation; do not rely on memory of prior rounds.
 
@@ -17,18 +17,18 @@ The round mechanics below are **load-bearing** and easy to drop under load. Read
 
 ## Required inputs
 
-The user supplies the feature root `<root>` (most common case), or an explicit `<impl-plan-dir>`. Resolution rule:
+The user supplies the feature root `<root>`. Resolution rule:
 
-- If the user named a feature root (e.g., "iterate the impl plan at `docs/refunds/`"), set `<impl-plan-dir>` to `<root>/impl/`.
-- If the user named a directory that already contains `overview.md` (e.g., "iterate `docs/refunds/sprint-plans/`"), treat that as `<impl-plan-dir>` directly.
+- If the user named a feature root (e.g., "iterate the impl plan at `docs/refunds/`"), use that path as `<root>`.
+- If the user named `design.md`, `overview.md`, `progress.md`, `decisions.md`, `status.md`, or a sprint file, use its parent directory as `<root>`.
 - If neither holds — the path is ambiguous or doesn't exist — ask the user and stop.
 
-After resolution, `<impl-plan-dir>` is the canonical directory the rest of this brief operates on.
+After resolution, `<root>` is the feature root the rest of this brief operates on.
 
 Before doing anything, in this order:
 
 1. Read the [Implementation Plan Documents — Authoring Guide](../specs/implementation-plan.md) end to end. Do not skim.
-2. Read **every file** in the plan directory at `<impl-plan-dir>`, top to bottom, in this order:
+2. Read **every implementation-plan file** in `<root>`, top to bottom, in this order:
    - `overview.md` — internalize philosophy, feature-wide locked decisions, sprint roster, dependency graph, open questions.
    - `decisions.md` — the plan-level (cross-cutting) Decisions log. Note the latest round tag.
    - `status.md` — the plan-level round-by-round audit trail. Note the current round number and the latest `_Next:_` clause.
@@ -99,7 +99,7 @@ For every resolution, edits land in **all** the files that surface holds. Many e
 Within a single file:
 
 1. **Rewrite the affected section** to reflect the chosen design. Purge obsolete wording — do not leave both old and new versions side-by-side. Supersession discipline is described in [implementation-plan.md § "Supersession"](../specs/implementation-plan.md).
-2. **Add a tagged bullet to the relevant Decisions log** with `(R<n>)`. Cross-cutting calls go in **`decisions.md`** (the plan-level top-level file — not a section inside `overview.md`); sprint-scoped calls go in the affected sprint file's Decisions log section. Each bullet leads with a **bold phrase** naming the call.
+2. **Add a tagged bullet to the relevant Decisions log** with `(R<n>)`. Cross-cutting calls go in the feature root's **`decisions.md`** (not a section inside `overview.md`); sprint-scoped calls go in the affected sprint file's Decisions log section. Each bullet leads with a **bold phrase** naming the call.
 3. **Compress older Decisions-log entries** at every scope this round touched. Walk both `decisions.md` and the affected sprint files' Decisions logs; condense any entry that this round (or an earlier round) has superseded, plus any entry whose details have gone stale. Compressed form: `- **<lead>.** Superseded by R<m>. (R<n>)` — round tag + supersession pointer preserved, rationale paragraph dropped. Keep the last 2–3 rounds and any still-actively-load-bearing entry in full. See [implementation-plan.md § "`decisions.md` anatomy"](../specs/implementation-plan.md). The audit trail survives; only obsolete prose is dropped.
 4. **Remove the resolved entry from Open questions** at the right scope. Do not append `(resolved)` in place — entries **move** to Decisions log.
 5. **Add newly-surfaced sub-questions** to the right Open-questions list (overview vs. sprint). Keep them numbered append-only.
@@ -108,11 +108,11 @@ Across files (multi-file edits):
 
 1. **List every file the resolution will touch before editing any of them.** Which file owns the canonical wording? Which files reference it? Does `overview.md` need updating (module-tree, dependency-graph one-liner, sprint roster, feature-wide locked decisions)? Do `decisions.md` or `status.md` need a new entry? Does `progress.md` need updating? Does the affected sprint's per-sprint Progress section need to mirror a `progress.md` change?
 2. **Edit canonical wording first**, consumers second. The file that *owns* a renamed Deliverable / Locked Decision / module-tree entry is updated before any file that *references* it.
-3. **After the edit pass, grep the directory for the rejected wording** (`grep -rn '<old wording>' <impl-plan-dir>`). Zero hits is the only acceptable result. One or more hits means a consumer was missed.
+3. **After the edit pass, grep the root for the rejected wording** (`grep -rn '<old wording>' <root>`). Zero hits is the only acceptable result. One or more hits means a consumer was missed.
 
 `progress.md` and per-sprint Progress sections must stay in lockstep. If you edit one, edit the other in the same pass. The master `progress.md` wins on conflict; the per-sprint copy is reconciled to it (unless the master is the broken side).
 
-### Step 5 — Re-read the directory end-to-end
+### Step 5 — Re-read the plan end-to-end
 
 Rewriting one file can silently invalidate wording elsewhere. Re-read the affected files, plus:
 
@@ -121,7 +121,7 @@ Rewriting one file can silently invalidate wording elsewhere. Re-read the affect
 - `progress.md` against every sprint file's per-sprint Progress section.
 - Architectural-invariants list in `overview.md` — does the new wording uphold them?
 
-Fix what you find in the **same round**. Do not leave the directory internally contradictory.
+Fix what you find in the **same round**. Do not leave the plan internally contradictory.
 
 ### Step 6 — Sanity-check before stopping
 
@@ -152,7 +152,7 @@ Fix what you find here, in this round.
 
 ### Step 7 — Append exactly one Status entry
 
-In **`status.md`** (the top-level plan-level Status file — not a section inside `overview.md`). Two clauses — what changed, then a `_Next:_` clause naming the recommended next-round focus:
+In the feature root's **`status.md`** (not a section inside `overview.md`). Two clauses — what changed, then a `_Next:_` clause naming the recommended next-round focus:
 
 ```
 - **Round <n>**: <one-line summary>; <one phrase about what was superseded, if anything>. _Next:_ <one-line recommended focus, citing Open question IDs + tags + scope where relevant>.
@@ -178,13 +178,13 @@ However, **compress older Status entries** that no longer carry weight. When you
 
 ### Step 8 — Emit the completeness assessment to chat
 
-This is **mandatory** at the end of every round, including small ones. The assessment is a chat-only output (not part of any file in the directory).
+This is **mandatory** at the end of every round, including small ones. The assessment is a chat-only output (not part of any plan file).
 
 Implementation plans use a three-threshold model: pick the threshold that matches what this round was aiming at.
 
 - **`scaffold-complete`** — Round 1 has just landed. `overview.md` populated (no Decisions/Status sections); `decisions.md` exists (empty or R1 entries); `status.md` has the R1 entry; one stub per roster entry; `progress.md` with a section per sprint; no `post-mortem.md`.
 - **`sprint-NN-execution-ready`** — the round just locked Sprint NN. Its file has the populated Locked Decisions table (10–25 rows), Architecture notes, Public surface (when applicable), Implementation Steps (5–10) each with concrete Verification, Step Dependency Chart, Acceptance checklist. Cross-sprint coherence holds — Prerequisites match prior Deliverables, `progress.md` mirrors the new step list.
-- **`plan-complete`** — every sprint has cleared the execution-ready bar. Cross-sprint coherence holds across the whole directory.
+- **`plan-complete`** — every sprint has cleared the execution-ready bar. Cross-sprint coherence holds across the whole plan.
 
 Use this exact structure:
 
@@ -219,7 +219,7 @@ Calibration:
 - **Don't oscillate.** Verdicts are about plan state, not round size.
 - **Cross-sprint coherence is load-bearing at every threshold above scaffold-complete.** A Prerequisite that names a Deliverable spelled differently in a prior sprint is a load-bearing-open item, not a nit.
 - **Don't pad.** A 12-bullet "top nits" list is a sign the plan isn't actually substantially-complete — promote the most material items into "load-bearing-open" and re-grade.
-- **Cite the file + section** in every bullet (`Sprint 04 § Locked Decisions`, `overview.md § Dependency graph`, `progress.md § Sprint 06`). Bare-section refs are too ambiguous in a directory of files.
+- **Cite the file + section** in every bullet (`Sprint 04 § Locked Decisions`, `overview.md § Dependency graph`, `progress.md § Sprint 06`). Bare-section refs are too ambiguous across multiple files.
 
 ### Step 9 — Stop. Wait for the user
 
@@ -247,7 +247,7 @@ Don't auto-progress to the next round. Each round is a discrete user-driven step
 - **Don't stop after resolving a sprint's blocking Open questions when you have enough information to lock it.** Resolving the questions and writing the Locked Decisions / Architecture notes / Implementation Steps / Step Dependency Chart / Acceptance checklist is one round, not two. Stopping early forces the user to re-invoke the skill just to ask you to do the next obvious thing. The exception is when locking would require inventing answers — then surface the gap as a new Open question instead. See Step 2's "Aggressive locking" guidance.
 - **Don't skip the completeness assessment.** Mandatory every round.
 - **Don't skip the `status.md` entry** when the round was small. Every round earns one entry.
-- **Don't put a Decisions log or Status section inside `overview.md`.** Those live in `decisions.md` and `status.md` at the top level of the plan directory. Any "Decisions log" / "Status" heading inside `overview.md` is a planning bug — move the content out, then delete the heading.
+- **Don't put a Decisions log or Status section inside `overview.md`.** Those live directly in the feature root as `decisions.md` and `status.md`. Any "Decisions log" / "Status" heading inside `overview.md` is a planning bug — move the content out, then delete the heading.
 - **Don't skip the sanity-check pass.** It is the cheapest way to catch the cross-file inconsistencies your own edits introduced.
 - **Don't skip the post-edit grep** for multi-file edits. A consumer left referencing the rejected wording is silent drift.
 - **Don't append `(resolved)` tags** inside Open questions.

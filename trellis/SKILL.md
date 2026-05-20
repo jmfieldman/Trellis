@@ -17,20 +17,19 @@ The user invokes this skill with free-text natural language. There are no positi
 Trellis splits feature work into three layers, each with its own discipline:
 
 1. **Design plan** — *what* the system is. Decisions, rationale, scope, open questions. Lives in a single canonical file named `design.md` inside a user-chosen feature root directory `<root>` (e.g., `docs/features/refunds/design.md`). Authoring guide: `specs/design-plan.md`.
-2. **Implementation plan** — *how* and *in what order* it gets built. A directory of sprint files with a master progress checklist. Canonical location is the sibling directory `<root>/impl/`. Authoring guide: `specs/implementation-plan.md`.
+2. **Implementation plan** — *how* and *in what order* it gets built. A set of markdown files in the same feature root: `overview.md`, `decisions.md`, `status.md`, `progress.md`, and one sprint file per sprint. Authoring guide: `specs/implementation-plan.md`.
 3. **Execution** — actually shipping the code, one step at a time, with a per-step subagent that implements, gets reviewed, and commits. Subagent briefs in `subagents/`.
 
 A typical feature root layout:
 
 ```
 <root>/
-├── design.md     canonical design plan
-└── impl/         canonical implementation plan directory
-    ├── overview.md
-    ├── decisions.md
-    ├── status.md
-    ├── progress.md
-    └── 01-<topic>.md … NN-<topic>.md
+├── design.md
+├── overview.md
+├── decisions.md
+├── status.md
+├── progress.md
+└── 01-<topic>.md … NN-<topic>.md
 ```
 
 Each of the planning layers has a **create** operation (bootstrap Round 1), an **iterate** operation (drive forward another round), and a **review** + **integrate-feedback** pair (agent-based external critique that gets triaged back into the plan). Execution is the terminal operation — it dispatches sprint steps one at a time.
@@ -64,7 +63,7 @@ Idea / feature brief
                 │ design plan complete
                 ▼
    ┌─────────────────────────┐
-   │  Implementation plan    │  ← directory of sprint files
+   │  Implementation plan    │  ← sprint files in <root>
    │  • create               │
    │  • iterate              │
    │  • review → integrate   │
@@ -85,7 +84,7 @@ Idea / feature brief
 1. **Start a design plan.** Round 1 lands the foundational decisions, scope, cross-references, and an open-questions list — *not* the schema or API surface. → `instructions/design-create.md`.
 2. **Iterate the design plan.** Each iteration round resolves 1–5 open questions, logs decisions, updates status, emits a completeness assessment. Manual driving uses `instructions/design-iterate.md`; agent-based external read uses `instructions/design-review.md` followed by `instructions/design-integrate-feedback.md`.
 3. **Once the design plan is `complete`** (zero `[blocks-v1]` / `[blocks-impl]` open questions remaining), graduate to implementation planning.
-4. **Bootstrap the implementation plan.** Round 1 produces a directory: `overview.md`, `decisions.md`, `status.md`, `progress.md`, and one stub per sprint. → `instructions/impl-create.md`.
+4. **Bootstrap the implementation plan.** Round 1 creates files directly in `<root>`: `overview.md`, `decisions.md`, `status.md`, `progress.md`, and one stub per sprint. → `instructions/impl-create.md`.
 5. **Iterate the implementation plan.** Same shape as design — lock sprints to execution-ready, resolve open questions, or re-slice the roster. → `instructions/impl-iterate.md` (manual) or `instructions/impl-review.md` + `instructions/impl-integrate-feedback.md` (agent review).
 6. **Execute sprints, one step at a time.** Once a sprint is execution-ready, the orchestrator dispatches per-step subagents that implement, verify, get reviewed, commit, and update Progress. → `instructions/impl-execute.md` (orchestrator) + `subagents/step-executor.md` + `subagents/step-reviewer.md`.
 
@@ -120,8 +119,8 @@ Each operation needs specific paths. Since invocation is natural-language, you h
 Path conventions (apply across every operation):
 
 - **The design plan is always `<root>/design.md`.** The user names only the feature root `<root>`; the agent appends `design.md`.
-- **The implementation plan directory is `<root>/impl/` by default.** For impl operations the user typically names only `<root>` and the agent appends `impl/`. The user may override by naming an explicit `<impl-plan-dir>` — honor the override only when the path the user provided clearly points at a directory containing `overview.md`.
-- **Tolerance.** If the user types a path ending in `design.md`, treat its parent as `<root>`. If they type a path that is already an impl-plan-dir (contains `overview.md`), use that directly. Don't re-prompt for paths whose meaning is unambiguous.
+- **Implementation plan files live directly in `<root>`.** For impl operations the user names the same feature root.
+- **Tolerance.** If the user types a path ending in `design.md`, `overview.md`, `progress.md`, `decisions.md`, `status.md`, or a sprint file like `03-foo.md`, treat its parent as `<root>`. Don't re-prompt for paths whose meaning is unambiguous.
 
 Per-operation inputs:
 
@@ -129,13 +128,13 @@ Per-operation inputs:
 - **design-iterate** needs `<root>` — reads and rewrites `<root>/design.md`.
 - **design-review** needs `<root>` and `<review-output-path>`. Reads `<root>/design.md`.
 - **design-integrate-feedback** needs `<root>` and `<feedback-path>`. Reads and rewrites `<root>/design.md`.
-- **impl-create** needs `<root>` (reads `<root>/design.md`) and optionally `<impl-plan-dir>` (defaults to `<root>/impl/`).
-- **impl-iterate** needs `<root>` (operates on `<root>/impl/`) — or an explicit `<impl-plan-dir>` override.
-- **impl-review** needs `<root>` (operates on `<root>/impl/`) — or an explicit `<impl-plan-dir>` — plus `<review-output-path>`.
-- **impl-integrate-feedback** needs `<root>` (operates on `<root>/impl/`) — or an explicit `<impl-plan-dir>` — plus `<feedback-path>`.
-- **impl-execute** needs `<sprint-path>`, `<from-step>`, and optionally `<to-step>`. The sprint path implies its parent as `<impl-plan-dir>` — no separate root needed.
+- **impl-create** needs `<root>` — reads `<root>/design.md` and creates implementation files directly in `<root>`.
+- **impl-iterate** needs `<root>` — operates on the implementation files directly in `<root>`.
+- **impl-review** needs `<root>` and `<review-output-path>` — reviews the implementation files directly in `<root>`.
+- **impl-integrate-feedback** needs `<root>` and `<feedback-path>` — edits the implementation files directly in `<root>`.
+- **impl-execute** needs `<sprint-path>`, `<from-step>`, and optionally `<to-step>`. The sprint path implies its parent as `<root>`.
 
-Inside the relevant instruction file, paths are referenced by their semantic names (`<root>`, `<impl-plan-dir>`, `<review-output-path>`, etc.). Substitute the values you extracted from the user's natural-language invocation wherever those placeholders appear, and resolve `<impl-plan-dir>` to `<root>/impl/` whenever the user only named a root.
+Inside the relevant instruction file, paths are referenced by their semantic names (`<root>`, `<review-output-path>`, etc.). Substitute the values you extracted from the user's natural-language invocation wherever those placeholders appear.
 
 If a path the operation needs is missing or unclear, ask for it before proceeding. Don't guess.
 
@@ -181,7 +180,7 @@ Each instruction file is designed to halt at a natural hand-off point — Round 
 ## What lives where
 
 - `specs/design-plan.md` — load-bearing authoring guide for design plan documents. Document anatomy, supersession discipline, open-questions tag taxonomy, decisions-log format, round-end completeness assessment.
-- `specs/implementation-plan.md` — load-bearing authoring guide for implementation plan directories. Directory layout, sprint anatomy, sprint archetypes and slicing heuristics, deviations during execution, completeness thresholds.
+- `specs/implementation-plan.md` — load-bearing authoring guide for implementation plan files. Root layout, sprint anatomy, sprint archetypes and slicing heuristics, deviations during execution, completeness thresholds.
 - `instructions/design-create.md` — runbook for bootstrapping a design plan (Round 1).
 - `instructions/design-iterate.md` — runbook for driving an existing design plan one round forward.
 - `instructions/design-review.md` — runbook for an external reviewer agent auditing a design plan.
