@@ -29,7 +29,7 @@ Trellis is the set of guardrails that has worked for me against those failure mo
 - Open questions carry **severity tags** (`[blocks-v1]` / `[blocks-impl]` / `[deferred]` / `[exploratory]`) so the user can grep for what's load-bearing.
 - The decisions log and the body **must agree** — supersession discipline forces stale wording to be purged, not left in place.
 - Reviews are a separate file; **integration triages** them into five buckets (incorporate, minor incorporate, open question, **reviewer-wrong**, ignore) so confident-but-wrong reviewer findings don't corrupt the plan.
-- Execution **dispatches per-step subagents** so the main chat stays small. Each step is its own commit, reviewed by another subagent, with a durable execution record under `reviews/`.
+- Execution **dispatches per-step subagents** so the main chat stays small. Each step is its own commit, reviewed by another subagent, with a durable execution record under `<root>/reviews/`.
 
 The design plan, implementation plan, and execution layers are deliberately separated: _what the system is_ shouldn't be litigated while writing sprint steps, and _how it gets built_ shouldn't be litigated while writing code.
 
@@ -123,6 +123,8 @@ A typical feature layout:
 ├── decisions.md
 ├── status.md
 ├── progress.md
+├── post-mortem.md       created lazily when the first sprint ships
+├── reviews/             execution records, created during impl-execute
 └── 01-<topic>.md … NN-<topic>.md
 ```
 
@@ -135,14 +137,14 @@ A typical feature layout:
 
 3. **Once the design plan is `complete`** (zero `[blocks-v1]` / `[blocks-impl]` open questions remaining, doc internally clean), graduate to implementation planning.
 
-4. **Bootstrap the implementation plan.** _"Use trellis to bootstrap an implementation plan at `docs/features/refunds/`."_ The agent consumes `docs/features/refunds/design.md` and creates `overview.md` (philosophy, sprint roster, dependency graph, feature-wide locked decisions — no Decisions log or Status section), `decisions.md` (plan-level Decisions log), `status.md` (plan-level round-by-round audit trail), `progress.md` (master checklist), and one stub file per sprint (`01-<topic>.md`, `02-<topic>.md`, …) directly in `docs/features/refunds/`.
+4. **Bootstrap the implementation plan.** _"Use trellis to bootstrap an implementation plan at `docs/features/refunds/`."_ The agent consumes `docs/features/refunds/design.md` and creates `overview.md` (philosophy, sprint roster, dependency graph, feature-wide locked decisions — no Decisions log or Status section), `decisions.md` (plan-level Decisions log), `status.md` (plan-level round-by-round audit trail), `progress.md` (master checklist), and one stub file per sprint (`01-<topic>.md`, `02-<topic>.md`, …) directly in `docs/features/refunds/`. It does **not** create `post-mortem.md` during bootstrap; that file appears only after the first sprint ships.
 
 5. **Iterate the implementation plan.** Same shape as design:
    - _"Use trellis to iterate the implementation plan at `docs/features/refunds/`; lock Sprint 02 to execution-ready."_ The agent operates on the implementation files in `docs/features/refunds/`. Each round typically locks one stub sprint, resolves a handful of open questions, or re-slices the roster.
    - _"Use trellis to review the implementation plan at `docs/features/refunds/` and save to `docs/features/refunds/impl-review-r5.md`."_ Then incorporate that review back in.
    - Same conversational continuation — keep talking after a round completes; you don't need to re-invoke each turn.
 
-6. **Execute sprints, one step at a time.** Once a sprint is execution-ready (Locked Decisions table populated, Implementation Steps with concrete Verification, Step Dependency Chart, Acceptance checklist), _"Use trellis to execute Sprint 02 step 3 through 5 in `docs/features/refunds/02-manager-core.md`."_ The orchestrator dispatches a per-step subagent that implements, runs verification, gets reviewed by another subagent, addresses the review, commits, and updates Progress. The orchestrator validates the hand-back (clean tree, new commit, Progress checked) and moves to the next step.
+6. **Execute sprints, one step at a time.** Once a sprint is execution-ready (Locked Decisions table populated, Implementation Steps with concrete Verification, Step Dependency Chart, Acceptance checklist), _"Use trellis to execute Sprint 02 step 3 through 5 in `docs/features/refunds/02-manager-core.md`."_ The sprint file's parent is the feature root. The orchestrator dispatches a per-step subagent that implements, runs verification, gets reviewed by another subagent, addresses the review, commits, updates Progress, and writes the durable execution record under `docs/features/refunds/reviews/<sprint-stem>/step-<N>.md`. The orchestrator validates the hand-back (clean tree, new commit, Progress checked) and moves to the next step.
 
 ### Each invocation can take inline instructions
 
@@ -172,7 +174,7 @@ All nine operations live inside the single `trellis` skill. The skill's top-leve
 | `impl-integrate-feedback`   | Triage a review back into the implementation plan       | `<root>`, plus `<feedback-path>`                                      |
 | `impl-execute`              | Execute a range of sprint steps with per-step subagents | `<sprint-path>`, `<from-step>`, `<to-step>` (optional)                |
 
-For every operation: the design plan is at `<root>/design.md`, and the implementation plan files also live in `<root>`. If the user names `design.md`, `overview.md`, `progress.md`, `decisions.md`, `status.md`, or a sprint file, the agent treats that file's parent as `<root>`.
+For every operation: the design plan is at `<root>/design.md`, and the implementation plan files also live in `<root>`. If the user names `design.md`, `overview.md`, `progress.md`, `decisions.md`, `status.md`, `post-mortem.md`, or a sprint file, the agent treats that file's parent as `<root>`.
 
 The skill is manually invoked (`disable-model-invocation: true`) — the model never starts a Trellis round on its own.
 
