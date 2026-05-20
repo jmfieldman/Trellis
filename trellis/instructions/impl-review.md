@@ -30,7 +30,7 @@ If `<review-output-path>` is missing, ask for it and stop.
 Before producing any review output, read these in order:
 
 1. **The implementation-plan authoring guide** at [`../specs/implementation-plan.md`](../specs/implementation-plan.md). This is your rubric — the directory you are reviewing was meant to be produced under this guide. Internalize:
-   - The required and optional document sections for `overview.md`, `decisions.md`, `status.md`, sprint files, `progress.md`, and `post-mortem.md`. **`decisions.md` and `status.md` are top-level files in the plan directory — not sections inside `overview.md`.** Any plan that still keeps a Decisions log or Status section inside `overview.md` is operating under the legacy layout; flag it.
+   - The required and optional document sections for `overview.md`, `decisions.md`, `status.md`, sprint files, `progress.md`, and `post-mortem.md`. **`decisions.md` and `status.md` are top-level files in the plan directory — not sections inside `overview.md`.** If a plan keeps a Decisions log or Status section inside `overview.md`, flag it as a layout violation.
    - The "architecture is inherited, not prescribed" rule — you are reviewing how well the plan adapts to the project's actual conventions, not against a generic template.
    - The sizing heuristics for sprint slicing (5–12 sprints, 5–10 steps/sprint, archetypes, fold/split signals).
    - The supersession discipline (purge stale wording; tag decisions by round; `status.md` calls out supersessions explicitly).

@@ -549,7 +549,7 @@ Default to `Avoid` for scope shaping. Reserve `Banned` for the few entries that 
 ```
 | Decision                                | Value                                                                                                                                                            |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Avoid in this sprint                    | (a) Legacy view files under `src/views/legacy/*`. Identifiers may need a renamed-argument propagation; do no more. (b) Documentation that describes the surface. |
+| Avoid in this sprint                    | (a) Retired view files under `src/views/archive/*`. Identifiers may need a renamed-argument propagation; do no more. (b) Documentation that describes the surface. |
 | Banned in this sprint                   | (a) Bumping `schemaVersion` — Sprint NN owns the migration. (b) Pre-staging the deferred `usageMetrics` field, even unused. (c) Relaxing the auth predicate.     |
 ```
 
