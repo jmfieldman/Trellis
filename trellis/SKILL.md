@@ -96,7 +96,7 @@ The user will tell you in natural language what they want. Your job:
 
 ### 1. Infer the operation
 
-Map the user's request to one of nine operations. The most common phrasings:
+Map the user's request to one of ten operations — nine layer-specific ones plus one cross-cutting accelerator (`resolve-open-questions`). The most common phrasings:
 
 | User intent                                                           | Operation                  | Instruction file                           |
 | --------------------------------------------------------------------- | -------------------------- | ------------------------------------------ |
@@ -109,8 +109,9 @@ Map the user's request to one of nine operations. The most common phrasings:
 | "Review the implementation plan"                                      | impl-review                | `instructions/impl-review.md`              |
 | "Incorporate this impl-plan review"                                   | impl-integrate-feedback    | `instructions/impl-integrate-feedback.md`  |
 | "Execute Sprint NN step M (through P) / ship this sprint"             | impl-execute               | `instructions/impl-execute.md`             |
+| "Resolve the open questions in `<file>` / answer the open questions for Sprint 03 / draft answers to this file's open questions" | resolve-open-questions | `instructions/resolve-open-questions.md`   |
 
-If the user's wording is ambiguous between two operations (e.g., "work on the implementation plan" could be iterate, review, or execute), ask which one before reading anything else.
+If the user's wording is ambiguous between two operations (e.g., "work on the implementation plan" could be iterate, review, or execute), ask which one before reading anything else. The closest pair to disambiguate is `*-iterate` vs. `resolve-open-questions`: an iterate round is **you** framing 1–5 questions and the user deciding each live; `resolve-open-questions` **fans out a subagent per question** to investigate and propose answers, which the user then approves or tunes in a batch. When the user says "answer / resolve / draft answers to the open questions in `<one file>`," that's `resolve-open-questions`; when they say "drive the plan forward" or "let's work through Q3 together," that's iterate.
 
 ### 2. Extract the paths from the user's message
 
@@ -133,6 +134,7 @@ Per-operation inputs:
 - **impl-review** needs `<root>` and `<review-output-path>` — reviews the implementation files directly in `<root>`.
 - **impl-integrate-feedback** needs `<root>` and `<feedback-path>` — edits the implementation files directly in `<root>`.
 - **impl-execute** needs `<sprint-path>`, `<from-step>`, and optionally `<to-step>`. The sprint path implies its parent as `<root>`.
+- **resolve-open-questions** needs `<trellis-file-path>` — a single file with an Open Questions section (`design.md`, `overview.md`, or a sprint file `NN-*.md`). Its parent is `<root>`. Optional inline instructions: "all questions" (include `[deferred]` / `[exploratory]`, not just blocking) and "then write the steps" (decompose into steps after integrating — sprint files only). It operates on **one file per invocation**; never accept "resolve all open questions across the plan."
 
 Inside the relevant instruction file, paths are referenced by their semantic names (`<root>`, `<review-output-path>`, etc.). Substitute the values you extracted from the user's natural-language invocation wherever those placeholders appear.
 
@@ -146,6 +148,7 @@ This skill bundles a lot of material. **Do not read everything up front.** Load 
 2. **When working with a design plan** (design-create, design-iterate, design-review, design-integrate-feedback, or when impl-create / impl-review need to consume one): `specs/design-plan.md` is the authoring guide. Load it before producing or auditing design-plan content.
 3. **When working with an implementation plan** (impl-create, impl-iterate, impl-review, impl-integrate-feedback, impl-execute): `specs/implementation-plan.md` is the authoring guide. Load it before producing or auditing implementation-plan content.
 4. **Only for impl-execute:** the orchestrator instruction file at `instructions/impl-execute.md` directs spawning subagents whose briefs live at `subagents/step-executor.md` and `subagents/step-reviewer.md`. The orchestrator passes the brief paths to the subagents; the orchestrator itself does not need to read those briefs end-to-end, but should know they exist.
+5. **Only for resolve-open-questions:** the orchestrator at `instructions/resolve-open-questions.md` spawns subagents whose briefs live at `subagents/question-resolver.md` and `subagents/question-reviewer.md` (the resolver spawns the reviewer). The orchestrator passes the brief paths; it does not read them end-to-end. At *integration* time it loads the spec matching the target file's doc type — `specs/design-plan.md` for `design.md`, `specs/implementation-plan.md` for `overview.md` / a sprint file — to apply standard round mechanics (move to Decisions log, append one Status entry, completeness assessment).
 
 **Do not** load `specs/design-plan.md` if the user is purely working on implementation-plan material that doesn't reference the design plan. **Do not** load `specs/implementation-plan.md` for a design-only round. **Do not** read subagent briefs unless you're running impl-execute. Each spec is large; loading both for every interaction wastes context.
 
@@ -190,5 +193,8 @@ Each instruction file is designed to halt at a natural hand-off point — Round 
 - `instructions/impl-review.md` — runbook for an external reviewer agent auditing an implementation plan.
 - `instructions/impl-integrate-feedback.md` — runbook for triaging an impl-plan review back into the plan.
 - `instructions/impl-execute.md` — orchestrator runbook for executing a range of sprint steps.
+- `instructions/resolve-open-questions.md` — orchestrator runbook for the cross-cutting open-questions accelerator (one file at a time): fan out resolver subagents, run a consistency pass, present, let the user approve/tune, then integrate with standard round mechanics.
 - `subagents/step-executor.md` — per-step subagent brief (implements, verifies, commits, gets reviewed, addresses review, updates Progress).
 - `subagents/step-reviewer.md` — per-step review subagent brief (fresh-context audit of the diff).
+- `subagents/question-resolver.md` — per-question subagent brief (investigates one Open Question, proposes a recommendation or refuses with options, spawns its own reviewer).
+- `subagents/question-reviewer.md` — review-of-resolution subagent brief (fresh-context critic that verifies the resolver's cited evidence).
