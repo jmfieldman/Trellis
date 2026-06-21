@@ -38,7 +38,7 @@ Before doing anything, in this order:
 3. Read the source design plan that `overview.md` cites in its framing block. The implementation plan implements the design plan; conflicts go back to the design plan, not into a sprint step.
 4. Skim the project's `CLAUDE.md` (or equivalent) for conventions, banned patterns, authorization rules.
 
-If the user provided no input beyond the skill invocation, stop here and say: *"Ready for Round &lt;next&gt;. Tell me which Open questions or which sprint to focus on, or share the input you'd like incorporated."* Do not pick on your own.
+If the user provided no input beyond the skill invocation, stop here and say: *"Ready for Round <next>. Tell me which Open questions or which sprint to focus on, or share the input you'd like incorporated."* Do not pick on your own.
 
 If the user provided input with the invocation, treat it as the round's seed and proceed with the workflow below.
 

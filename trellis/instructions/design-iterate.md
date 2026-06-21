@@ -25,7 +25,7 @@ Before doing anything, in this order:
 2. Read the existing design plan at `<root>/design.md` end to end — every section, top to bottom. Don't rely on prior conversation context.
 3. Skim the project's `CLAUDE.md` (or equivalent) for any project conventions, banned patterns, or authorization rules that may affect this round's decisions.
 
-If the user provided no input beyond the skill invocation, stop here and say: *"Ready for Round &lt;next&gt;. Tell me which Open questions to focus on, or share the input you'd like incorporated."* Do not pick questions on your own.
+If the user provided no input beyond the skill invocation, stop here and say: *"Ready for Round <next>. Tell me which Open questions to focus on, or share the input you'd like incorporated."* Do not pick questions on your own.
 
 If the user provided input with the invocation, treat that as the round's seed and proceed with the workflow below.
 
