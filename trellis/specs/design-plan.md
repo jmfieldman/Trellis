@@ -377,6 +377,21 @@ abstract bulkLookupByPhone: (
 
 ---
 
+## Pre-hand-off sanity checklist
+
+Before handing a round back to the user — whether bootstrapping Round 1 (`design-create`) or driving a later round (`design-iterate`) — walk this checklist over the file and fix what you find *in the same round*. Each item has cost the system a round when missed. The create/iterate skills layer a few step-specific checks on top of this shared set.
+
+- **Every decision has rationale.** A bold lead (a foundational-decision item or a Decisions-log bullet) with no paragraph following it is half a decision — add the rationale or move the item to Open questions.
+- **Every Open question carries exactly one severity tag** (`[blocks-v1]` / `[blocks-impl]` / `[deferred]` / `[exploratory]`). Untagged entries are a process bug.
+- **Every cross-reference resolves.** Each link points at a real adjacent doc / wiki page / code path. Mark broken or unauthored references explicitly (`(TBD — not yet authored)`) rather than letting them rot silently.
+- **No marketing words** — walk for `elegant`, `clean`, `robust`, `powerful`, `best-in-class` and purge.
+- **No build-spec specifics** — no exact file paths beyond illustrative, no exact TypeScript implementations, no specific function names beyond illustrative. Those belong in the implementation plan.
+- **No `(resolved)` tags inside Open questions** — resolved entries move to the Decisions log.
+- **v1 / Tier-0 compromises are labeled in place** — `Tier 0 trade-off`, `v1 ships with X — semantics improve once Y lands`, `acceptable at this scale; revisit if Z becomes hot`. A reader should never have to guess whether a piece is the long-term answer or a deliberate stop-gap.
+- **Tone matches the guide** — active voice about the system; identifiers in backticks; em-dashes for asides; absolute dates only.
+
+---
+
 ## Driving a round with the user
 
 ### Continuing an existing doc

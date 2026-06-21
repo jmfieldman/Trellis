@@ -197,11 +197,10 @@ Once implementation commits are in place and `git status` is clean, spawn a **re
 
 **Fresh-context independent review is the point of this step. Do not self-review.** The reviewer's value is reading the diff without the implementation reasoning loaded into context — a self-review collapses that distance and silently degrades the audit. Inline self-review is not a substitute.
 
-Try to dispatch the reviewer yourself first — it keeps the orchestrator's context light. Some harnesses surface their tool list across multiple indexes (primary tools vs. deferred / on-demand tools) — do not conclude the dispatch tool is unavailable from one index alone; attempt the spawn first, and if a discovery mechanism exists (e.g., a tool-search primitive), use it.
+Dispatch the reviewer yourself when your harness allows it — it keeps the orchestrator's context light. Follow the **nested-dispatch discovery & fallback rule** ([nested-dispatch.md](../specs/nested-dispatch.md)) to decide whether you can: attempt the spawn first, use any discovery mechanism, and distinguish the two failure shapes. This step maps them as:
 
-If the dispatch primitive **errors when invoked**, the reviewer brief path is unreachable, or any other concrete blocker arises mid-spawn, stop with `status: stopped` and a `stop_reason` quoting the failure mode. The orchestrator surfaces; the user picks the next move.
-
-However, if your harness simply does **not** expose nested-subagent dispatch at all (verified by attempting the dispatch and inspecting whatever discovery mechanism exists — not assumed from one index), do **not** stop. Instead follow the "Orchestrator-dispatched review fallback" section below. The orchestrator can dispatch the reviewer on your behalf; the audit property (fresh-context reader) is preserved either way.
+- **Concrete blocker** (dispatch primitive errors when invoked, reviewer brief path unreachable, any other mid-spawn failure): stop with `status: stopped` and a `stop_reason` quoting the failure mode. The orchestrator surfaces; the user picks the next move.
+- **Nested dispatch not exposed at all** (verified per the discovery rule, not assumed from one index): do **not** stop — follow the "Orchestrator-dispatched review fallback" section below. The orchestrator dispatches the reviewer on your behalf; the audit property (fresh-context reader) is preserved.
 
 Use the `Agent` tool with `subagent_type=general-purpose`. Pass the round number — `1` for the initial pass, `2` for any follow-up after fixes:
 
@@ -355,7 +354,7 @@ Stage the sprint file, `progress.md`, and `<execution-record-path>`. Commit:
 <feature-area>: sprint <NN> step <N> — update progress, deviations, execution record
 ```
 
-This commit also goes through pre-commit. If a markdown linter / frontmatter validator / formatter rejects something, follow the standard recovery flow (fix -> re-stage -> new commit; never `--amend`, never `--no-verify`) unless the only failure is the already-reviewed expected intermediate gate failure for a non-final step.
+This commit also goes through pre-commit. If a markdown linter / frontmatter validator / formatter rejects something, follow the standard recovery flow in § "Pre-commit hooks" (fix → re-stage → new commit; never `--amend`, never `--no-verify`) unless the only failure is the already-reviewed expected intermediate gate failure for a non-final step.
 
 If you genuinely have **no** deviations and **no** deferred concerns, you may roll the Progress + execution-record updates into the implementation commit instead of a separate doc commit. Use judgment — readable history beats a fixed commit count.
 

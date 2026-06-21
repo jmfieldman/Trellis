@@ -60,9 +60,7 @@ The bar for refusing is "I have enough information to answer this honestly" — 
 
 Once you've formed your proposal (recommendation or refusal-with-options), spawn a **question-reviewer** subagent to independently critique it. Fresh-context review is the point — the reviewer reads your proposal, the question, and the artifacts *without* your investigation reasoning loaded, and verifies your cited evidence actually holds. Do not self-review; it collapses that distance.
 
-Try to dispatch the reviewer yourself first — it keeps the orchestrator's context light. Some harnesses surface their tool list across multiple indexes (primary vs. deferred / on-demand tools); do not conclude the dispatch tool is unavailable from one index alone. Attempt the spawn first, and if a discovery mechanism exists (e.g., a tool-search primitive), use it.
-
-If the dispatch primitive **errors when invoked** or the reviewer brief path is unreachable, return your proposal with `reviewer_verdict: not_run` and a one-line note — the orchestrator will dispatch the reviewer on your behalf. If your harness simply does **not** expose nested-subagent dispatch at all (verified by attempting it), do the same: `reviewer_verdict: not_run`. The audit property is preserved either way, because the orchestrator dispatches from a context that hasn't seen your reasoning.
+Dispatch the reviewer yourself when your harness allows it — it keeps the orchestrator's context light. Follow the **nested-dispatch discovery & fallback rule** ([nested-dispatch.md](../specs/nested-dispatch.md)): attempt the spawn first, use any discovery mechanism, and distinguish the two failure shapes. For this resolver, **both** shapes map to the same hand-back — return your proposal with `reviewer_verdict: not_run` and a one-line note, and the orchestrator dispatches the reviewer on your behalf. The audit property is preserved because the orchestrator dispatches from a context that hasn't seen your reasoning.
 
 Use the `Agent` tool with `subagent_type=general-purpose`:
 

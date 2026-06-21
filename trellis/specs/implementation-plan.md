@@ -937,8 +937,7 @@ There are three different "complete enough" thresholds; the assessment picks the
 **Plan-complete** — every sprint is execution-ready:
 
 - Every sprint file has cleared the Sprint-NN-execution-ready bar.
-- The dependency graph in `overview.md` agrees with every sprint's Prerequisites list.
-- The cross-sprint coherence checks (overview locked decisions vs. sprint locked decisions; module-tree drift; convention drift; invariant honoring) all pass.
+- The cross-sprint coherence checks all pass — every item in § "Cross-sprint coherence checklist" (Prerequisite ↔ Deliverable matching, dependency-graph honesty, overview-vs-sprint decisions, module-tree drift, conventions drift, invariants honored, roster completeness, `progress.md` lockstep, `status.md` supersessions, open-question ownership, round-numbering, acceptance coverage).
 - `progress.md` reflects the full step structure.
 - Open Questions at every scope are empty *or* contain only items explicitly deferred with rationale.
 - `decisions.md` and `status.md` are coherent with every sprint file's sprint-scoped Decisions / Status sections — round numbering consistent, supersessions paired with body edits, no orphaned references.
@@ -984,6 +983,38 @@ Calibration:
 - **One block per round.** Don't emit multiple completeness assessments in the same round; the user reads the latest as authoritative.
 
 This assessment is the agent's recommendation, not a gate. The user decides when to graduate. But the assessment forces the agent to take a position each round, which surfaces drift before it compounds across sprint files.
+
+---
+
+## Multi-file edit discipline
+
+An implementation plan is a set of files that must agree at their seams. Most planning failures hide *between* files, not inside any one — a Prerequisite renamed in one sprint but left stale in the sprint that consumes it produces a plan where every file is internally coherent and only the seam is wrong. Any round that edits across files (an `impl-iterate` round, an `impl-integrate-feedback` pass, a `resolve-open-questions` integration) follows this discipline:
+
+1. **List the file cluster before editing any file.** Which file *owns* the canonical wording the edit changes? Which files *reference* it (consume, forward-link, mirror, or restate)? Does `overview.md` need an update (module-tree, dependency-graph one-liner, sprint roster, feature-wide locked decisions)? Do `decisions.md` / `status.md` need an entry? Does `progress.md` — and the affected sprint's per-sprint Progress section — need updating? Write the cluster down before opening any file; a cluster you didn't enumerate is one you'll forget to finish.
+2. **Edit canonical-owner first, consumers second.** The file that *owns* the renamed Deliverable / locked decision / module-tree entry is updated before any file that *references* it. Editing a consumer before its owner opens a window where both old and new wording coexist — and an incomplete pass leaves the plan in exactly that broken state.
+3. **Grep the feature root for the rejected wording after the edit pass.** `grep -rn '<old wording>' <root>` — zero hits is the only acceptable result; any hit means a consumer was missed. This is the cheapest way to catch the silent drift the incorporation itself introduced.
+
+`progress.md` and the per-sprint Progress sections stay in lockstep: edit one, edit the other in the same pass. The master `progress.md` wins on conflict; reconcile the per-sprint copy to it (unless the master is the broken side).
+
+---
+
+## Cross-sprint coherence checklist
+
+The implementation plan is a *system* of files that must agree with each other. These are the checks that catch the failure modes living in the seams between sprint files — the highest-leverage class of planning bug, because each one is invisible to a reader (or reviewer) looking at any single file. Every round's sanity pass (`impl-iterate`), every plan review (`impl-review`), and the `plan-complete` completeness threshold walk this same list.
+
+- **Prerequisite ↔ Deliverable matching.** Every sprint's Prerequisite is produced by a prior sprint's Deliverable, names a peer-service surface that exists, or is flagged as an audit-or-build branch. Every "deferred to Sprint NN" out-of-scope entry is owned by Sprint NN's Deliverables. Promises and obligations come in pairs — flag any pair missing a side.
+- **Dependency-graph honesty.** `overview.md`'s dependency chart agrees with the per-sprint Prerequisites lists. A sprint that lists Sprint 04 as a prerequisite sits downstream of 04 in the graph. Cycles are slicing bugs, not graphs.
+- **Overview vs. sprint-level decisions.** Sprint-level Locked Decisions tables *refine* the overview's Feature-wide locked decisions; they never *override* them. A sprint that silently picks a different soft-delete posture, idempotency-key shape, or test-location than the overview pinned is a critical inconsistency.
+- **Sprint-vs-sprint agreement.** Two sprints that touch the same surface agree on its shape — a column, an error code, or an idempotency strategy fixed in one sprint isn't re-decided differently in another.
+- **Module / directory layout drift.** Every file a sprint commits to creating appears in `overview.md`'s Module/Directory tree; no sprint proposes a path the tree contradicts.
+- **Cross-sprint conventions drift.** Every sprint uses the test framework, error vocabulary, logger, branching workflow, and migration policy `overview.md`'s Cross-sprint conventions pinned — not a quietly different one.
+- **Architectural invariants honored everywhere.** No sprint violates an invariant from `overview.md`'s "Architectural invariants" list; each sprint that touches one restates the relevant verification in its Acceptance checklist.
+- **Sprint roster completeness.** Every roster row points at a real sprint file; every sprint file appears in the roster; numbering matches file order; titles match.
+- **`progress.md` ↔ per-sprint Progress lockstep.** The master checklist and each sprint file's per-sprint Progress section are identical for that sprint's slice — no step-presence, ordering, or `[x]`/`[ ]` drift.
+- **`status.md` supersessions paired with body edits.** A re-slice or supersession announced in `status.md` actually shows in the sprint files: old wording purged, new files in place, dependent Prerequisites updated, `progress.md` regenerated.
+- **Open-question ownership.** Each open question (overview-level + sprint-level) names the sprint(s) it blocks; it doesn't cite a sprint that doesn't exist, and the blocked sprint acknowledges it.
+- **Round-numbering coherence.** Decisions-log round tags across `decisions.md` and the sprint files use one coherent plan-level scheme (the counter is incremented in `status.md`); flag impossible tags (a sprint `(R6)` entry when `status.md` never reached Round 6).
+- **Acceptance-checklist coverage.** Each sprint's Acceptance checklist covers every documented failure mode in its Public surface, every architectural invariant it touched, every "Subtle bug" gotcha in its steps, and the cross-sprint convention items (build / type / test / lint green; spec sync; tests at the right layer).
 
 ---
 

@@ -126,15 +126,10 @@ A Round 1 doc is typically 80–250 lines. If it's approaching the length of a f
 
 ### Step C.5 — Sanity-check before hand-off
 
-Before sending the user the hand-off message, walk the file you just produced and verify:
+Before sending the user the hand-off message, walk the file you just produced against the shared [design-plan.md § "Pre-hand-off sanity checklist"](../specs/design-plan.md) — every decision has rationale, every Open question carries exactly one severity tag, cross-references resolve, no marketing words, no build-spec specifics, no `(resolved)` tags, v1/Tier-0 compromises labeled, tone matches the guide. Plus two Round-1-specific checks:
 
-- **Every foundational decision has rationale.** A bold lead with no paragraph following it is half a decision. Either add the rationale or move the item to Open questions.
 - **Every Open question is concrete.** "What about caching?" is not a question; "Should reactions invalidate the conversation-sync cache, or is the existing per-message cursor sufficient for v1?" is. Reshape vague questions or split them.
-- **Cross-references resolve.** Each link points at a real adjacent doc / wiki page / code path. If a referenced doc doesn't exist, mark it `(TBD — not yet authored)` rather than letting the link rot silently.
-- **No marketing words.** Walk for "elegant," "clean," "robust," "powerful," "best-in-class." Purge.
-- **No build-spec specifics.** No exact file paths beyond illustrative ones, no exact TypeScript implementations, no specific function names beyond illustrative. Those belong in the implementation plan, not the design plan.
 - **Scope frame and Open questions don't contradict.** An Open question that asks "should X be in scope" but the Scope section silently includes X is incoherent — pick a side or note the contradiction explicitly.
-- **Tone matches the guide.** Active voice about the system; identifiers in backticks; em-dashes for asides; absolute dates only.
 
 Fix the issues you find before handing back to the user. A Round 1 file with broken cross-references or unjustified decisions is harder to repair in Round 2 than to get right now.
 
@@ -142,7 +137,7 @@ Fix the issues you find before handing back to the user. A Round 1 file with bro
 
 After the file is written, emit the hand-off message (template below). The hand-off is a chat-only summary; it is not part of the file.
 
-The hand-off ends with the **completeness assessment** mandated by the authoring guide § "Round-end completeness assessment." Round 1 verdicts are almost always `not-yet-complete` — the doc is by design incomplete after Round 1. The interesting content is *what* is load-bearing-open and *which* of those should be Round 2's focus.
+The hand-off ends with the **completeness assessment** mandated by [design-plan.md § "Round-end completeness assessment"](../specs/design-plan.md) — emit the block exactly as that section specifies (the worked Round 1 instance in the hand-off template below follows it). Round 1 verdicts are almost always `not-yet-complete` — the doc is by design incomplete after Round 1. The interesting content is *what* is load-bearing-open and *which* of those should be Round 2's focus.
 
 **Stop. Don't auto-progress to Round 2.**
 

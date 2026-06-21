@@ -100,17 +100,11 @@ Within a single file:
 
 1. **Rewrite the affected section** to reflect the chosen design. Purge obsolete wording — do not leave both old and new versions side-by-side. Supersession discipline is described in [implementation-plan.md § "Supersession"](../specs/implementation-plan.md).
 2. **Add a tagged bullet to the relevant Decisions log** with `(R<n>)`. Cross-cutting calls go in the feature root's **`decisions.md`** (not a section inside `overview.md`); sprint-scoped calls go in the affected sprint file's Decisions log section. Each bullet leads with a **bold phrase** naming the call.
-3. **Compress older Decisions-log entries** at every scope this round touched. Walk both `decisions.md` and the affected sprint files' Decisions logs; condense any entry that this round (or an earlier round) has superseded, plus any entry whose details have gone stale. Compressed form: `- **<lead>.** Superseded by R<m>. (R<n>)` — round tag + supersession pointer preserved, rationale paragraph dropped. Keep the last 2–3 rounds and any still-actively-load-bearing entry in full. See [implementation-plan.md § "`decisions.md` anatomy"](../specs/implementation-plan.md). The audit trail survives; only obsolete prose is dropped.
+3. **Compress older Decisions-log entries** at every scope this round touched — walk both `decisions.md` and the affected sprint files' Decisions logs, condensing any entry this round (or an earlier round) superseded plus any whose details have gone stale, per [implementation-plan.md § "`decisions.md` anatomy"](../specs/implementation-plan.md). Keep the last 2–3 rounds and any still-load-bearing entry in full.
 4. **Remove the resolved entry from Open questions** at the right scope. Do not append `(resolved)` in place — entries **move** to Decisions log.
 5. **Add newly-surfaced sub-questions** to the right Open-questions list (overview vs. sprint). Keep them numbered append-only.
 
-Across files (multi-file edits):
-
-1. **List every file the resolution will touch before editing any of them.** Which file owns the canonical wording? Which files reference it? Does `overview.md` need updating (module-tree, dependency-graph one-liner, sprint roster, feature-wide locked decisions)? Do `decisions.md` or `status.md` need a new entry? Does `progress.md` need updating? Does the affected sprint's per-sprint Progress section need to mirror a `progress.md` change?
-2. **Edit canonical wording first**, consumers second. The file that *owns* a renamed Deliverable / Locked Decision / module-tree entry is updated before any file that *references* it.
-3. **After the edit pass, grep the root for the rejected wording** (`grep -rn '<old wording>' <root>`). Zero hits is the only acceptable result. One or more hits means a consumer was missed.
-
-`progress.md` and per-sprint Progress sections must stay in lockstep. If you edit one, edit the other in the same pass. The master `progress.md` wins on conflict; the per-sprint copy is reconciled to it (unless the master is the broken side).
+Across files (multi-file edits): follow [implementation-plan.md § "Multi-file edit discipline"](../specs/implementation-plan.md) — list the file cluster before editing any of it (which file owns the canonical wording; which files reference it; whether `overview.md` / `decisions.md` / `status.md` / `progress.md` and the per-sprint Progress section need updating), edit the canonical-owner first and consumers second, then `grep -rn '<old wording>' <root>` (zero hits is the only acceptable result; a hit means a consumer was missed). `progress.md` and per-sprint Progress sections stay in lockstep — edit one, edit the other in the same pass; the master wins on conflict.
 
 ### Step 5 — Re-read the plan end-to-end
 
@@ -127,13 +121,7 @@ Fix what you find in the **same round**. Do not leave the plan internally contra
 
 Walk these checks before sending the hand-off message. Each one has cost the system a round when missed.
 
-**Cross-file coherence:**
-- **Every Prerequisite has a matching Deliverable** in a prior sprint, or names a peer-service surface that exists, or is flagged as an audit-or-build branch.
-- **Every "deferred to Sprint NN" out-of-scope entry** corresponds to an actual Sprint NN whose Deliverables list owns the item.
-- **Sprint-level Locked Decisions don't override overview-level ones.** They refine; they do not contradict.
-- **Module-tree drift:** every file an existing sprint commits to creating appears in `overview.md` § Module/Directory layout.
-- **`progress.md` ↔ per-sprint Progress** match exactly for every sprint.
-- **`status.md` supersessions are paired with body edits.** A re-slice / supersession announced in `status.md` actually shows in the affected sprint files.
+**Cross-file coherence:** walk every check in [implementation-plan.md § "Cross-sprint coherence checklist"](../specs/implementation-plan.md) — Prerequisite ↔ Deliverable matching, "deferred to Sprint NN" ownership, sprint-vs-overview decision conflicts, module-tree drift, `progress.md` ↔ per-sprint Progress lockstep, `status.md` supersessions paired with body edits, and the rest. Fix any drift this round introduced or surfaced.
 
 **Within-file quality:**
 - **Every new Decisions-log entry has rationale** — bold lead followed by a one-paragraph defense, not a bare bullet.
@@ -174,52 +162,20 @@ Cite supersessions explicitly (e.g., `R7 supersedes R5's contiguity-cache rule`;
 
 If the round materially changed a single sprint, append a sprint-scoped Status / Feedback-incorporated entry to that sprint file too (in addition to the entry in `status.md`). Status entries are append-only **for the round you are appending** — never edit *prior* entries to falsify what happened.
 
-However, **compress older Status entries** that no longer carry weight. When you append the new round, walk both `status.md` and any sprint-level Status / Feedback-incorporated logs; condense entries whose `_Next:_` clause is long-finished (drop the `_Next:_`) or whose round-summary detail is no longer load-bearing because later rounds superseded it (collapse to `**Round <n>**: <one-clause summary>`). Keep the last 2–3 rounds in full at each scope. Never delete a round entry outright — round numbering must stay contiguous and grep-able. See [implementation-plan.md § "`status.md` anatomy"](../specs/implementation-plan.md). Compression is *not* falsification: obsolete prose is dropped, the audit trail (round number + supersession link) is preserved.
+However, **compress older Status entries** that no longer carry weight — when you append the new round, walk both `status.md` and any sprint-level Status / Feedback-incorporated logs, per [implementation-plan.md § "`status.md` anatomy"](../specs/implementation-plan.md). Keep the last 2–3 rounds in full at each scope; never delete a round entry outright — round numbering must stay contiguous and grep-able.
 
 ### Step 8 — Emit the completeness assessment to chat
 
 This is **mandatory** at the end of every round, including small ones. The assessment is a chat-only output (not part of any plan file).
 
-Implementation plans use a three-threshold model: pick the threshold that matches what this round was aiming at.
+Emit it exactly as specified in [implementation-plan.md § "Round-end completeness assessment"](../specs/implementation-plan.md) — the verbatim block structure (including the `**Threshold graded**` field), the verdict semantics, and the calibration rules all live there. Don't restate them here.
 
-- **`scaffold-complete`** — Round 1 has just landed. `overview.md` populated (no Decisions/Status sections); `decisions.md` exists (empty or R1 entries); `status.md` has the R1 entry; one stub per roster entry; `progress.md` with a section per sprint; no `post-mortem.md`.
-- **`sprint-NN-execution-ready`** — the round just locked Sprint NN. Its file has the populated Locked Decisions table (10–25 rows), Architecture notes, Public surface (when applicable), Implementation Steps (5–10) each with concrete Verification, Step Dependency Chart, Acceptance checklist. Cross-sprint coherence holds — Prerequisites match prior Deliverables, `progress.md` mirrors the new step list.
-- **`plan-complete`** — every sprint has cleared the execution-ready bar. Cross-sprint coherence holds across the whole plan.
+Round-specific deltas for an iterate round:
 
-Use this exact structure:
-
-```markdown
-### Round <N> — completeness assessment
-
-**Verdict**: <not-yet-complete | substantially-complete | complete>
-**Threshold graded**: <scaffold-complete | sprint-NN-execution-ready | plan-complete>
-
-**What's still load-bearing-open** *(if not complete; omit otherwise)*:
-- <file or sprint + section + the gap>
-- …
-
-**Top nits worth resolving before declaring done** *(if substantially-complete or complete; omit otherwise)*:
-- <file + section + the wording / consistency / coverage issue>
-- …
-
-**Recommended next-round focus**:
-- <one-line recommendation; usually the load-bearing-open items, or "lock Sprint NN+1" if the current sprint is execution-ready, or "hand off to implementation" if plan-complete>
-```
-
-Verdict semantics (relative to the chosen threshold; full definitions in [implementation-plan.md § "Round-end completeness assessment"](../specs/implementation-plan.md)):
-
-- **`not-yet-complete`** — at least one load-bearing item from the threshold's checklist is open or undecided.
-- **`substantially-complete`** — load-bearing items are decided but rough edges remain (drift, stale wording, marketing language, missing tag).
-- **`complete`** — load-bearing items are decided *and* the affected files are internally clean.
-
-Calibration:
-
-- **Always name the threshold.** A round that locks Sprint 03 grades against `sprint-03-execution-ready`, not `plan-complete`. Listing "Sprint 04+ are still stubs" against a Sprint 03 round is noise.
-- **Default to `not-yet-complete`** until the threshold's full checklist is met. The bar for `substantially-complete` is high.
-- **Don't oscillate.** Verdicts are about plan state, not round size.
-- **Cross-sprint coherence is load-bearing at every threshold above scaffold-complete.** A Prerequisite that names a Deliverable spelled differently in a prior sprint is a load-bearing-open item, not a nit.
-- **Don't pad.** A 12-bullet "top nits" list is a sign the plan isn't actually substantially-complete — promote the most material items into "load-bearing-open" and re-grade.
-- **Cite the file + section** in every bullet (`Sprint 04 § Locked Decisions`, `overview.md § Dependency graph`, `progress.md § Sprint 06`). Bare-section refs are too ambiguous across multiple files.
+- **Pick the threshold this round aimed at** — `scaffold-complete` (Round 1 just landed), `sprint-NN-execution-ready` (the round just locked Sprint NN), or `plan-complete` (every sprint is execution-ready). The full definitions are in the spec section above.
+- **Always name the threshold and grade only against it.** A round that locks Sprint 03 grades against `sprint-03-execution-ready`, not `plan-complete`; "Sprint 04+ are still stubs" is not a load-bearing-open item for that round.
+- **Cross-sprint coherence is load-bearing at every threshold above scaffold-complete** — a Prerequisite that names a Deliverable spelled differently in a prior sprint is a load-bearing-open item, not a nit.
+- **The verdict feeds Step 7's `_Next:_` clause** — they must agree.
 
 ### Step 9 — Stop. Wait for the user
 

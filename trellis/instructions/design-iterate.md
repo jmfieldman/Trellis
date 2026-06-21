@@ -69,7 +69,7 @@ For every question the user resolved this round, in the same edit pass:
 
 1. **Rewrite the affected body section** to reflect the chosen design. Purge the obsolete wording — do not leave both old and new versions side-by-side. Supersession discipline is described in [design-plan.md § "Supersession"](../specs/design-plan.md).
 2. **Add a tagged bullet to the Decisions log** with the next round number, e.g. `(R<n>)`. Each bullet leads with a **bold phrase** that names the call.
-3. **Compress older Decisions-log entries** that this round (or an earlier round) has superseded, and any entries whose details have gone stale. Condense them to a one-line marker that preserves the round tag and supersession pointer (`- **<lead>.** Superseded by R<m>. (R<n>)`); drop the rationale paragraph. Keep the last 2–3 rounds and any still-actively-load-bearing entry in full regardless of age. See [design-plan.md § 14 → "Compressing older entries"](../specs/design-plan.md). The audit trail (round number + supersession link) must survive; only obsolete prose is dropped.
+3. **Compress older Decisions-log entries** that this round (or an earlier round) has superseded, plus any whose details have gone stale, per [design-plan.md § 14 → "Compressing older entries"](../specs/design-plan.md). Keep the last 2–3 rounds and any still-load-bearing entry in full.
 4. **Remove the resolved entry from Open questions.** Do not append `(resolved)` in place — the entry **moves** to Decisions log. Do not renumber remaining entries.
 5. **Add any newly-surfaced sub-questions** to Open questions for the next round. Tag each at creation with exactly one of `[blocks-v1]` / `[blocks-impl]` / `[deferred]` / `[exploratory]` per [design-plan.md § "Severity tag taxonomy"](../specs/design-plan.md). For `[blocks-v1]` / `[blocks-impl]` entries, name the specific blockee.
 
@@ -81,17 +81,9 @@ If a resolution invalidated a prior `(R<m>)` Decisions-log entry, note the super
 
 ### Step 6 — Sanity-check before stopping
 
-Walk these checks before sending the hand-off message. Each one has cost the system a round when missed.
+Walk the shared [design-plan.md § "Pre-hand-off sanity checklist"](../specs/design-plan.md) before sending the hand-off message — every decision has rationale, every Open question carries exactly one severity tag, cross-references resolve, no marketing words, no build-spec specifics, no `(resolved)` tags, v1/Tier-0 compromises labeled, tone matches the guide. Each item has cost the system a round when missed. Plus one iterate-specific check:
 
-- **Every new Decisions-log entry has rationale.** A bold lead with no paragraph following it is half a decision.
-- **Every new Open question carries exactly one severity tag.** Untagged entries are a process bug.
-- **Every cross-reference resolves.** Each link points at a real adjacent doc / wiki page / code path. Mark broken or unauthored references explicitly (`(TBD — not yet authored)`) rather than letting them rot silently.
-- **No marketing words.** Walk for `elegant`, `clean`, `robust`, `powerful`, `best-in-class`. Purge.
-- **No build-spec specifics.** No exact file paths beyond illustrative ones, no exact TypeScript implementations, no specific function names beyond illustrative.
-- **No `(resolved)` tags** inside Open questions. Resolved entries move to Decisions log.
 - **No fabricated decisions.** Anything you decided unilaterally (because the user said "you pick") is logged and called out in the hand-off so the user can react.
-- **v1 / Tier-0 compromises are labeled in place** — `Tier 0 trade-off`, `v1 ships with X — semantics improve once Y lands`, `acceptable at this scale; revisit if Z becomes hot`. A future reader should never have to guess whether a piece is the long-term answer or a deliberate stop-gap.
-- **Tone matches the guide** — active voice about the system; identifiers in backticks; em-dashes for asides; absolute dates only.
 
 Fix what you find here, in this round.
 
@@ -116,44 +108,18 @@ Pick the `_Next:_` clause from your completeness assessment's "Recommended next-
 
 Cite supersessions explicitly when they happened (e.g., `R7 supersedes R5's contiguity-cache rule`). Status entries are append-only **for the round you are appending** — never edit *prior* entries to falsify what happened.
 
-However, **compress older Status entries** that no longer carry weight. When you append the new round, walk the older entries and condense any whose `_Next:_` clause is long-finished (drop the `_Next:_` clause) or whose summary detail is no longer load-bearing because later rounds superseded it (collapse to `**Round <n>**: <one-clause summary>`). Keep the last 2–3 rounds in full. Never delete a round entry outright — round numbering must stay contiguous and grep-able. See [design-plan.md § 15 → "Compressing older Status entries"](../specs/design-plan.md). The compression is *not* a falsification: the entries that gain detail (the superseding round) and the entries that lose detail (the superseded round) are consistent with what actually happened; obsolete prose is dropped, the audit trail is preserved.
+However, **compress older Status entries** that no longer carry weight when you append the new round, per [design-plan.md § 15 → "Compressing older Status entries"](../specs/design-plan.md). Keep the last 2–3 rounds in full; never delete a round entry outright — round numbering must stay contiguous and grep-able. Compression drops obsolete prose, not the audit trail.
 
 ### Step 8 — Emit the completeness assessment to chat
 
 This is **mandatory** at the end of every round, including small ones. The assessment is a chat-only output (not part of the doc body). It forces the agent to take a position each round, which surfaces drift before it compounds.
 
-Use this exact structure:
+Emit it exactly as specified in [design-plan.md § "Round-end completeness assessment"](../specs/design-plan.md) — the verbatim block structure (`### Round <N> — completeness assessment`, Verdict, tag counts, load-bearing-open / top-nits / recommended-next-round-focus), the verdict semantics (`not-yet-complete` / `substantially-complete` / `complete`), and the calibration rules (don't oscillate, don't pad, cite the section) all live there. Don't restate them here.
 
-```markdown
-### Round <N> — completeness assessment
+Round-specific deltas for an iterate round:
 
-**Verdict**: <not-yet-complete | substantially-complete | complete>
-**Open-question tag counts**: `<a> blocks-v1 / <b> blocks-impl / <c> deferred / <d> exploratory`
-
-**What's still load-bearing-open** *(if not complete; omit otherwise)*:
-- <one-line item naming the section / question + tag + why it's load-bearing>
-- …
-
-**Top nits worth resolving before declaring done** *(if substantially-complete or complete; omit otherwise)*:
-- <one-line item naming a section + the wording / consistency / coverage issue>
-- …
-
-**Recommended next-round focus**:
-- <one-line recommendation; usually the highest-priority blocks-v1 / blocks-impl items, or "graduate to implementation plan" if complete>
-```
-
-Verdict semantics (full definitions in [design-plan.md § "Round-end completeness assessment"](../specs/design-plan.md)):
-
-- **`not-yet-complete`** — at least one load-bearing item is still open or undecided. Default to this verdict whenever any `[blocks-v1]` or `[blocks-impl]` entry remains open. The "What's still load-bearing-open" block enumerates the gaps.
-- **`substantially-complete`** — all load-bearing items are decided, but rough edges remain (stale wording, marketing language to purge, a missing tag, a Decisions log entry that drops a clause). The "Top nits" block enumerates them.
-- **`complete`** — load-bearing decisions are made *and* the doc is internally clean. Recommend graduating to an implementation plan (or running `design-review` first if the user wants an external check).
-
-Calibration:
-
-- **Default to `not-yet-complete`** until *every* item from the "When a design plan is 'complete'" checklist in `design-plan.md` is true. The bar for `substantially-complete` is high — if you haven't ticked the foundational + scope + schema + lifecycle + API + auth checks mentally, the verdict is `not-yet-complete`.
-- **Don't oscillate.** If round N said `substantially-complete` and round N+1 only changed a comment, the verdict shouldn't drop back to `not-yet-complete`.
-- **Don't pad either side.** A 3-bullet "load-bearing-open" list is a real list. A 12-bullet "top nits" list is a sign the plan is not actually substantially-complete — promote the most material items into "load-bearing-open" and re-grade.
-- **Cite the section** in every bullet (`Schema § \`chat.messages\``, `Open questions Q4`) so the user can navigate without re-reading the doc.
+- **Default to `not-yet-complete`** until *every* item from the spec's "When a design plan is 'complete'" checklist is true — in particular, whenever any `[blocks-v1]` or `[blocks-impl]` entry remains open. The bar for `substantially-complete` is high; if you haven't mentally ticked the foundational + scope + schema + lifecycle + API + auth checks, the verdict is `not-yet-complete`.
+- **The verdict feeds Step 7's `_Next:_` clause.** The assessment's "Recommended next-round focus" line and the Status `_Next:_` clause must agree.
 
 ### Step 9 — Stop. Wait for the user
 

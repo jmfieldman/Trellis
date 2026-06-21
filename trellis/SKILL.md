@@ -187,6 +187,7 @@ Each instruction file is designed to halt at a natural hand-off point — Round 
 - `specs/design-plan.md` — load-bearing authoring guide for design plan documents. Document anatomy, supersession discipline, open-questions tag taxonomy, decisions-log format, round-end completeness assessment.
 - `specs/implementation-plan.md` — load-bearing authoring guide for implementation plan files. Root layout, sprint anatomy, sprint archetypes and slicing heuristics, deviations during execution, completeness thresholds.
 - `specs/instruction-precedence.md` — single canonical statement of the Trellis instruction precedence chain; every instruction file and subagent brief points back to it.
+- `specs/nested-dispatch.md` — single canonical statement of the nested-subagent dispatch discovery & fallback rule; the execute / resolve subagent briefs and orchestrators point back to it.
 - `instructions/design-create.md` — runbook for bootstrapping a design plan (Round 1).
 - `instructions/design-iterate.md` — runbook for driving an existing design plan one round forward.
 - `instructions/design-review.md` — runbook for an external reviewer agent auditing a design plan.
