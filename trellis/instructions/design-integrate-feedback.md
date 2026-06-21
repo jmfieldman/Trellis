@@ -73,7 +73,7 @@ If verification turns up that the review's claim is wrong (the cited section doe
 
 This step is fast — the median Incorporate item is verified in 30 seconds with a Read or grep. Don't skip it because "the review looks careful" — agent reviewers are uniformly confident.
 
-If the volume of verification is large and you find a high rate of reviewer-wrong findings (>20% of Incorporate-bucket items fail verification), stop and surface this to the user before continuing. The review may need to be re-run rather than triaged.
+If the volume of verification is large and reviewer-wrong findings are piling up — more than ~20% of the Incorporate-bucket items you've verified so far are failing — stop and surface this to the user before continuing. The review may need to be re-run rather than triaged. This is the **same ~20% threshold** as the post-triage Reviewer-wrong calibration band (§ "The triage rule" → "Calibration check"), measured against a different denominator at a different moment: this check runs *during* verification against the Incorporate-bucket items verified so far (the earliest signal), while the calibration band runs *after* triage against all review items (the final tally). Either crossing ~20% is cause to stop.
 
 ---
 
@@ -164,6 +164,8 @@ Default to **Minor incorporate** when the item is a *wording / consistency / sta
 
 **Calibration check.** After triaging the whole review, count the buckets. Because the reviewer now supplies a recommendation for every judgment call and your default is to adopt it, the Incorporate bucket runs heavier than it used to and the Open-question bucket runs lighter — Open questions are now the *exception* (the genuinely-needs-a-human residue), not the default home for every shape question. Use the design-plan bands below; the impl-plan version of this skill uses different bands.
 
+**These bands assume a review with ≳8 distinct items.** On a smaller review (a handful of findings), the percentages are statistical noise — judge each item on its merits and don't force the distribution to match a band.
+
 A healthy design-plan triage is roughly:
 
 - **20–40% Incorporate (full)** — material edits that earn a Decisions-log entry, including adopted reviewer recommendations on shape questions. This bucket runs heavier than under the old "frame, don't resolve" posture — that is intended.
@@ -189,7 +191,7 @@ When you do incorporate:
 - **Add a tagged bullet to the Decisions log** for each material incorporation, using the next round number (`(R<n>)`). For pure typo / wording / structural-cleanup edits, a Decisions-log entry is optional — but for anything that names a call the plan now relies on, log it. Lead with a bold phrase that names the call.
 - **Compress older Decisions-log entries** that this incorporation pass (or an earlier round) has superseded, plus any whose details have gone stale, per [design-plan.md § 14 → "Compressing older entries"](../specs/design-plan.md). Keep the last 2–3 rounds and any still-load-bearing entry in full.
 - **Update Open questions**: remove an entry if the incorporation resolves it (rare in this skill — usually means you should have triaged it as Open question instead); add an entry for each item triaged into the Open-question bucket.
-- **Append exactly one new Status entry** for this incorporation pass. Format: `**Round <n>**: incorporated review feedback — <one-line summary of what changed>; <count> items added to Open questions; <count> items declined. _Next:_ <one-line recommended focus for the next planning round, citing Open question IDs + tags>.` Round number is the plan's next integer. The `_Next:_` clause persists the recommendation into the doc itself — a user resuming the plan via `design-iterate` reads it to recover where to pick up. When all newly-filed Open questions are `[deferred]` / `[exploratory]` and no `[blocks-v1]` / `[blocks-impl]` items remain anywhere in the plan, the `_Next:_` clause is `graduate to implementation plan`.
+- **Append exactly one new Status entry** for this incorporation pass. Format: `**Round <n>**: incorporated review feedback — <one-line summary of what changed>; <count> material incorporations; <count> items added to Open questions; <count> items declined. _Next:_ <one-line recommended focus for the next planning round, citing Open question IDs + tags>.` Round number is the plan's next integer. The `_Next:_` clause persists the recommendation into the doc itself — a user resuming the plan via `design-iterate` reads it to recover where to pick up. When all newly-filed Open questions are `[deferred]` / `[exploratory]` and no `[blocks-v1]` / `[blocks-impl]` items remain anywhere in the plan, the `_Next:_` clause is `graduate to implementation plan`.
 - **Compress older Status entries** that no longer carry weight after appending the new entry, per [design-plan.md § 15 → "Compressing older Status entries"](../specs/design-plan.md). Keep the last 2–3 rounds in full; never delete a round outright — round numbering stays contiguous and grep-able.
 - **Re-read affected sections** after editing to catch wording from earlier rounds that your edits silently invalidated. If you find any, fix them in the same pass and note the supersession in the Status entry.
 - **Preserve internal consistency.** If incorporating one review item creates a tension with another part of the plan you didn't touch, either resolve it by extending the edit or file the new tension as an Open question. Do not leave the plan internally contradictory.
@@ -215,7 +217,7 @@ When you ignore:
 This skill edits a design plan in place. That is the explicit purpose, so you do not need additional confirmation for body edits, Decisions-log additions, Open-questions additions, or Status appends *within the named plan file*. You **do** need confirmation before:
 
 - Editing any other file (including creating sibling docs, splitting the plan, or moving sections out).
-- Renaming the plan file (concern #27 in the example feedback is a rename — propose, don't act).
+- Renaming the plan file (a rename is a structural action — propose, don't act).
 - Touching code, schemas, migrations, or anything outside the named plan path.
 
 If a review item recommends changes outside the plan file, treat those as Open questions or surface them in the final chat report; do not act on them.
@@ -224,7 +226,7 @@ If a review item recommends changes outside the plan file, treat those as Open q
 
 1. **Read both documents end-to-end.** No skimming. Note the plan's current Round count, last Status entry, current Open-questions numbering, and the Decisions-log round tags.
 2. **Enumerate the review items.** Most reviews are already itemized (numbered concerns / nits). Treat each numbered item as one unit. If a review item bundles multiple sub-points, split it into sub-units before triaging — each sub-unit gets its own bucket.
-3. **First-pass triage** each unit into incorporate / minor-incorporate / open-question / ignore. Keep a running internal table: `unit-id, bucket, one-line rationale`. Reviewer-wrong is a *result* of verification (Step 4), not a first-pass call.
+3. **First-pass triage** each unit into incorporate / minor-incorporate / open-question / ignore. Keep a running internal table: `unit-id, bucket, one-line rationale`. The fifth bucket, **Reviewer-wrong**, is a *result* of verification (Step 4), not a first-pass call — that's why first-pass triage names only four.
 4. **Verify every Incorporate-bucket item** before applying it. For each, confirm the cited section / cross-reference / convention claim against the actual source per § "Verify before incorporating." Items whose cited evidence doesn't hold move to **Reviewer-wrong** — do not edit the plan based on a claim that didn't survive verification. Minor incorporate, Open question, and Ignore items skip verification (see § "When verification is required").
 5. **Calibration check.** Count the buckets against the design-plan bands in § "The triage rule" → "Calibration check" (target ~20–40% Incorporate, ~15–30% Minor, ~10–25% Open question, 0–10% Reviewer-wrong, ~5–15% Ignore). If Open question holds >35%, re-triage boundary cases — for each, check whether the reviewer recommended an option whose reasoning survives verification; if so, it belongs in Incorporate. If Incorporate (full) holds >45%, re-check for fresh design calls the reviewer did not recommend. If Reviewer-wrong holds >20%, **stop and surface this to the user** — the review may need to be re-run rather than triaged.
 6. **Apply incorporations** in dependency order: structural moves (split a bundled question, add a missing section) before within-section edits. Apply Incorporate and Minor incorporate items in the same pass; the only difference at edit time is whether a Decisions-log entry is added afterward. Make all edits via the `Edit` tool against the plan file; do not rewrite the whole file unless the volume of edits genuinely warrants it.

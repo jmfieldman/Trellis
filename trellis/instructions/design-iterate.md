@@ -102,6 +102,8 @@ Examples:
 - **Round 8**: schema for `chat.reactions` finalized; soft-delete cascade documented. _Next:_ graduate to implementation plan — no [blocks-v1] / [blocks-impl] entries remain.
 ```
 
+**Zero-resolution rounds.** If the round resolved nothing — the user explored options but locked no decisions — still append exactly one Status entry recording that: `**Round <n>**: discussion only — <what was explored>; no decisions locked. _Next:_ <one-line recommended focus>`. Every round earns an entry; a discussion-only round is no exception. Such a round has no Decisions-log bullet (nothing was decided), and Open questions are unchanged except for any newly-surfaced sub-questions.
+
 Why the `_Next:_` clause: it persists the chat-only hand-off recommendation into the doc itself. A user resuming the plan a week later via `design-iterate` reads the latest `_Next:_` and knows where to pick up — without depending on prior chat history.
 
 Pick the `_Next:_` clause from your completeness assessment's "Recommended next-round focus" (Step 8) — they should agree. If the plan is complete, the `_Next:_` clause is `graduate to implementation plan` (or `run design-review for an external check first` if the user asked for one).

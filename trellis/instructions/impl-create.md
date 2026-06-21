@@ -25,7 +25,7 @@ Implementation-plan files directly in `<root>`, alongside `design.md`:
 
 **Do not create `post-mortem.md` at Round 1.** That file is created lazily — the first sprint to ship creates it in the same PR that checks off its final step. Scaffolding an empty `post-mortem.md` in Round 1 is noise. See `implementation-plan.md` § "`post-mortem.md` anatomy" for the format.
 
-The implementation plan is **not** complete after Round 1. Step-level detail, Architecture notes, API surfaces, locked sprint decisions, and Acceptance checklists land in subsequent rounds.
+The implementation plan is **not** complete after Round 1. Step-level detail, Architecture notes, Public surfaces, locked sprint decisions, and Acceptance checklists land in subsequent rounds.
 
 ---
 
@@ -86,6 +86,8 @@ Ask the user: does this slicing match their mental model? Are there sprints they
 
 **Iterate on the slicing in conversation before writing files.** A bad slicing means re-shaping every file in Round 2; getting it close in Round 1 saves churn.
 
+**Impasse stop condition.** If after a couple of rounds of back-and-forth the user keeps rejecting rosters without converging, stop proposing — do **not** guess at a roster to break the deadlock. A wrong roster scaffolded to "make progress" costs more to unwind than the stall. Instead, name the specific axis of disagreement (sprint count, a contested seam, sequencing order) as the blocker, and ask the user to decide that axis directly or to defer scaffolding until the slicing question is resolved. Scaffolding is not the goal; an agreed slicing is.
+
 ### Step C — Scaffold files directly in `<root>`
 
 Once slicing is agreed, create the five required artifact types directly in `<root>` (`overview.md`, `decisions.md`, `status.md`, `progress.md`, one stub per sprint). See [implementation-plan.md § "Root layout"](../specs/implementation-plan.md) for the canonical file list.
@@ -144,7 +146,7 @@ Do **not** populate in Round 1:
 
 - **Key design decisions, locked before implementation** — leave the section header and a placeholder line `_To be locked in a later round._`. Don't fabricate decisions.
 - **Architecture notes** — same posture; placeholder.
-- **API surface** — placeholder.
+- **Public surface** — placeholder.
 - **Progress** — leave this section out of the stub. It will be added when the sprint is decomposed into steps. (`progress.md` will list this sprint by name only, no step bullets yet.)
 - **Implementation Steps** — leave out entirely.
 - **Step Dependency Chart** — leave out.

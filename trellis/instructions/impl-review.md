@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 # Implementation Plan Review — Reviewer Agent Brief
 
-You are an expert engineering reviewer auditing an **implementation plan** as a whole. Read the [Implementation Plan Documents — Authoring Guide](../specs/implementation-plan.md). Your job is to read the entire plan — `overview.md`, every sprint file, `progress.md`, and (if present) `post-mortem.md` — end-to-end and surface concerns the author may not have caught: gaps in coverage, internal inconsistencies *between sprint files*, around-corner failure modes the plan hasn't accounted for, places where the plan diverges from the authoring guide, and substance issues in the engineering itself.
+You are an expert engineering reviewer auditing an **implementation plan** as a whole. Read the [Implementation Plan Documents — Authoring Guide](../specs/implementation-plan.md). Your job is to read the entire plan — `overview.md`, `decisions.md`, `status.md`, every sprint file, `progress.md`, and (if present) `post-mortem.md` — end-to-end and surface concerns the author may not have caught: gaps in coverage, internal inconsistencies *between sprint files*, around-corner failure modes the plan hasn't accounted for, places where the plan diverges from the authoring guide, and substance issues in the engineering itself.
 
 You are reviewing the **whole plan holistically**. Where the design-plan reviewer scrutinizes a single document, you scrutinize a set of inter-dependent files that must agree with each other. Cross-sprint coherence is your highest-leverage axis: a sprint that contradicts another sprint, a Deliverable that nobody consumes, a Prerequisite nobody produces, an overview-level locked decision that a sprint silently overrides — these are the failure modes that ship broken code.
 
@@ -21,7 +21,7 @@ You are reviewing the implementation plan in `<root>` and saving your review to 
 - If the user named `design.md`, `overview.md`, `progress.md`, `decisions.md`, `status.md`, or a sprint file, use its parent directory as `<root>`.
 - If neither holds, ask the user and stop.
 
-If `<review-output-path>` is missing, ask for it and stop.
+If `<review-output-path>` is missing, default to `<root>/impl-review-R<N>.md` (where `<N>` is the plan's current round number from `status.md`) — don't force a round-trip with the user just to name the output file. Tell the user where you wrote it.
 
 ---
 
@@ -94,19 +94,10 @@ Walk **every** check in [implementation-plan.md § "Cross-sprint coherence check
 
 ### 4. Around-corner concerns
 
-This is the highest-leverage substance category for any single sprint. Look hard for:
+This is the highest-leverage substance category for any single sprint. Walk **every** item in [implementation-plan.md § "Around-corner concern checklist"](../specs/implementation-plan.md) — race conditions, idempotency gaps, concurrency / transaction boundaries, partial success, external-system assumptions, migration / rollout risk, backwards compatibility, privacy / authorization, observability, scale boundaries, GC / orphan rows — against each sprint that ships lifecycle, integration, or async behavior. For each concern the sprint doesn't answer, raise a numbered finding with where / what / why / suggested-direction. A few of these have sprint-specific teeth in an impl-plan review: a migration-risk finding should note when a sprint's Acceptance checklist doesn't gate the migration's safety; an observability finding should note when the concern is delegated to the hardening sprint and then left unaddressed there.
 
-- **Race conditions.** Two events arriving in either order. Two workers running the same task. A request landing during a state transition. Webhook + sync racing the same external state change.
-- **Idempotency gaps.** Steps that re-fire on retry, pod restart, debounce flush, or manual re-sync, where the second fire isn't a no-op. Especially: external API calls or worker tasks that aren't gated by a deterministic idempotency key.
-- **Concurrency / transaction boundaries.** Read-before-BEGIN / write-after-COMMIT discipline. Cross-service calls inside transactions. Locks held across IO. Eager + worker-safety-net patterns where one is missing.
-- **Partial success.** Financial action ✓, notification ✗ — vs. — financial action ✗, notification ✓ — vs. — both succeed but our row write failed. Each combination needs an answer in the steps.
-- **External-system assumptions.** Behavior assumed about a partner API that isn't pinned in their docs / sandbox / contract. Webhook delivery semantics taken for granted (ordering, at-least-once, debounce).
-- **Migration / rollout risk.** Schema changes without deploy-order discipline. Backfill assumptions. Missing feature-flag / kill-switch. Unsafe column adds (NOT NULL on populated tables, etc.). Sprints whose Acceptance checklist doesn't gate the migration's safety.
-- **Backwards compatibility.** Old clients seeing new state; new clients seeing old state. API contract changes without versioning. Data shape evolution without migration story.
-- **Privacy / authorization.** Who can see what. Cross-tenant leakage. Soft-deleted rows reappearing. Data leaving its owning service. Access scope of new resource methods (`internal_function` vs. `public_api`).
-- **Observability.** Can support / oncall debug a failure of this sprint's surface from logs alone? Structured event-log fields named? Error paths emit useful context? Metrics for the cases that matter? Is this delegated entirely to the hardening sprint and then unaddressed there?
-- **Scale boundaries.** "Acceptable at Tier 0" claims — are they quantified? What's the breaking point? What's the trigger to revisit?
-- **GC / orphan rows.** Eager cleanup paths plus a worker safety net? What happens to attached child rows when the parent transitions terminal? What happens to references in peer services?
+Plus one impl-execution-specific hazard the shared checklist doesn't cover:
+
 - **Step ordering hazards.** A step that ships behavior before its tests land. A step that adds an index after the query that needs it ships. A step that turns on a worker before its idempotency story is in place. Walk the per-step ordering looking for these.
 
 ### 5. Substance quality

@@ -64,7 +64,9 @@ Schema, API surface, lifecycle, worker logic, GC — these mostly come in later 
 When a later round invalidates a prior decision:
 
 1. Update the body to reflect the new design.
-2. Either edit the existing Decisions-log bullet (preserving its round tag) or add a new one tagged with the current round.
+2. Update the Decisions log. Two distinct cases, often conflated:
+   - **A newly-resolved Open question** always **moves** to the Decisions log as a *new* bullet tagged with the current round (`(R<n>)`). Never record it by editing some other bullet in place, and never leave a `(resolved)` tag behind in Open questions.
+   - **A revision to a prior decision already in the log** may either edit that existing bullet (preserving its round tag) or add a new bullet tagged with the current round — whichever keeps the audit trail clearest.
 3. Note the supersession explicitly in the Status log: `**Round 7**: cross-conversation sync redesigned — replaced GET /chat/sync with POST /chat/conversations/sync. R5's contiguity-cache rule superseded.`
 4. **Purge stale wording** from the body. Old paragraphs left in place become land mines for future readers.
 
@@ -269,7 +271,7 @@ Keep the last 2–3 rounds in full; keep any still-actively-load-bearing entry i
 A flat numbered list — one entry per planning round — capturing what changed *and* what to focus on next:
 
 ```
-- **Round 1**: foundational decisions captured + schema sketch + open questions enumerated. _Next:_ resolve the privacy predicate for participant invites (Q3 [blocks-v1]).
+- **Round 1**: foundational decisions captured + open questions enumerated. _Next:_ resolve the privacy predicate for participant invites (Q3 [blocks-v1]).
 - **Round 2**: naming → `conversation`; REST verbs split per resource type; … _Next:_ lock the sync cursor shape (Q7 [blocks-impl]).
 - **Round 9**: introduced `preempted_by` denormalization on `chat.messages` … _Next:_ graduate to implementation plan.
 ```
@@ -277,7 +279,7 @@ A flat numbered list — one entry per planning round — capturing what changed
 Each entry has two clauses:
 
 1. **What changed.** A summary of what this round resolved or superseded. Cite supersessions explicitly (`R7 supersedes R5's contiguity-cache rule`).
-2. **`_Next:_` clause** — a one-line italic tail naming the recommended next-round focus, citing the Open question(s) by ID + tag. This persists the agent's between-rounds recommendation into the doc itself, so a user picking the doc up a week later via `design-iterate` doesn't lose the chat-only handoff context. When the plan is complete, the `_Next:_` clause is `graduate to implementation plan` (or `run design-review for an external check first`).
+2. **`_Next:_` clause** — a one-line italic tail naming the recommended next-round focus, citing the Open question(s) by ID + tag. This persists the agent's between-rounds recommendation into the doc itself, so a user picking the doc up a week later via `design-iterate` doesn't lose the chat-only handoff context. When the plan is complete, the `_Next:_` clause is `graduate to implementation plan` (or `run design-review for an external check first` if the user wants one).
 
 The Rounds log is the doc's git log. Scan it to recover narrative context: "why does the doc say X" → "round 5 supersedes round 3 because Y." Read the latest `_Next:_` clause to recover the agent's prior recommendation for what to work on now.
 
@@ -397,7 +399,7 @@ Before handing a round back to the user — whether bootstrapping Round 1 (`desi
 ### Continuing an existing doc
 
 1. **Read the entire doc, end to end.** Identify Open questions, recent Decisions log entries, and the most recent Status round.
-2. **Pick 1–3 questions** to focus this round. Prefer questions whose resolutions are reasonably independent (so they don't snowball each other).
+2. **Pick 1 to ~5 questions** to focus this round. Prefer questions whose resolutions are reasonably independent (so they don't snowball each other).
 3. **For each, frame the choice** for the user: 2–3 viable options with trade-offs, your recommendation, and one sentence on what gets unblocked by the answer.
 4. **After the user answers**, update the doc:
    - Body section gets the new design (purge the old wording).

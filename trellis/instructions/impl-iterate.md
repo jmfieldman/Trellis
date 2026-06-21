@@ -25,6 +25,8 @@ The user supplies the feature root `<root>`. Resolution rule:
 
 After resolution, `<root>` is the feature root the rest of this brief operates on.
 
+If `<root>` contains `design.md` but no `overview.md`, the implementation plan hasn't been scaffolded yet — this is an `impl-create` job, not an iterate job. Tell the user to run `impl-create` on `<root>` and stop; don't try to read absent implementation-plan files.
+
 Before doing anything, in this order:
 
 1. Read the [Implementation Plan Documents — Authoring Guide](../specs/implementation-plan.md) end to end. Do not skim.
@@ -56,7 +58,7 @@ Before saying anything substantive, internally note:
 - Open questions at every scope — overview-level + per-sprint — with counts.
 - Most recent Decisions log entries at every scope (plan-level in `decisions.md`; sprint-scoped inside each sprint file).
 - Which sprints have shipped (final step `[x]` in `progress.md`) — those bodies are mostly read-only; capture corrections via "Feedback incorporated" or "Deviations applied during implementation" surfaces.
-- Which sprints are still stubs vs. execution-ready (an execution-ready sprint has a populated Locked Decisions table, Architecture notes, Implementation Steps with concrete Verification, Step Dependency Chart, and Acceptance checklist).
+- Which sprints are still stubs vs. execution-ready (an execution-ready sprint has a populated Locked Decisions table, Architecture notes, Public surface when applicable, a Progress checklist, Implementation Steps with concrete Verification, a Step Dependency Chart, and an Acceptance checklist — the full `sprint-NN-execution-ready` bar in [implementation-plan.md § "Round-end completeness assessment"](../specs/implementation-plan.md)).
 - Any wording the most recent Status entry called out as superseded.
 
 ### Step 2 — Triage what this round will address
@@ -65,13 +67,15 @@ Pick **one** of these focuses — but recognize that resolving a single sprint's
 
 - **Lock a single sprint to execution-ready.** Take a stub sprint, resolve any of its remaining `[blocks-impl]` / `[blocks-v1]` Open questions in the same round, and populate its Locked Decisions (10–25 rows), Architecture notes, Public surface, Implementation Steps with Goal/Actions/Deliverables/Verification, Step Dependency Chart, Acceptance checklist. The most common round shape after Round 1.
 - **Resolve 1–5 overview-level Open questions.** When the questions are reasonably independent and don't snowball.
-- **Resolve sprint-level Open questions for a single sprint — and continue in the same round to lock that sprint** when the resolutions clear the last blocker. The open questions exist precisely so the sprint can be locked; stopping between "questions resolved" and "sprint locked" makes the user re-invoke the skill for ceremony rather than for a decision. See "Aggressive locking" below.
-- **Re-slice the sprint roster.** Splitting / folding / re-numbering sprints. Update `overview.md`'s roster and dependency graph, rename sprint files, regenerate `progress.md`, and call out the supersession in this round's `status.md` entry.
+- **Resolve sprint-level Open questions for a single sprint — and continue in the same round to lock that sprint** when the resolutions clear the last blocker (the same focus as the first menu item — see Step 2's intro and "Aggressive locking" below).
+- **Re-slice the sprint roster.** Splitting / folding / re-numbering sprints. Update `overview.md`'s roster and dependency graph, rename sprint files, regenerate `progress.md`, and call out the supersession in this round's `status.md` entry. **Shipped sprints are frozen from renumbering** — a sprint whose final step is `[x]` keeps its number, filename, and checkboxes; renumber only unshipped sprints around it (see [implementation-plan.md § "When sprint slicing changes mid-stream"](../specs/implementation-plan.md)).
 - **Fix cross-sprint coherence drift.** Prerequisite ↔ Deliverable name mismatches, dependency-graph contradictions, `progress.md` ↔ per-sprint Progress drift.
 
 If the user named a focus, that's the round. Don't expand beyond what they asked for unless you flag the expansion explicitly.
 
 **Aggressive locking.** When this round resolves sprint-level Open questions for Sprint NN, check at the end of Step 4 whether Sprint NN still has any `[blocks-impl]` or `[blocks-v1]` Open questions. If the answer is no, **do not stop and ask permission to continue** — populate the Locked Decisions table, Architecture notes, Public surface (when applicable), Implementation Steps with concrete Verification, Step Dependency Chart, and Acceptance checklist in this same round, then grade the round against `sprint-NN-execution-ready` (not the lesser "questions resolved" threshold). `[exploratory]` and `[deferred]` questions are allowed to survive into a locked sprint — they exist precisely so they don't gate execution. Flag any you carried through in the hand-off so the user can decide whether to close them before implementation.
+
+**Newly-surfaced options still wait.** Aggressive locking means you don't re-ask permission to *continue* once the surfaced questions are decided — it does **not** mean you decide *new* options unilaterally. If populating the sprint surfaces a fresh decision the user hasn't weighed in on, that option re-enters Step 3 (frame the alternatives, then wait) — lock only what the user has actually decided. Aggressive locking applies after all *surfaced* options are user-decided; any newly surfaced option re-enters the wait.
 
 The brake on aggressive locking: if locking would require inventing answers the design plan and the user haven't given you, **stop and surface the gap as a new Open question** — don't fabricate locked decisions to look productive. The bar is "I have enough information to populate every section honestly," not "the user resolved one question, so I'll write steps regardless." See "Don't fabricate locked decisions" in Posture rules.
 
@@ -106,7 +110,7 @@ Within a single file:
 
 Across files (multi-file edits): follow [implementation-plan.md § "Multi-file edit discipline"](../specs/implementation-plan.md) — list the file cluster before editing any of it (which file owns the canonical wording; which files reference it; whether `overview.md` / `decisions.md` / `status.md` / `progress.md` and the per-sprint Progress section need updating), edit the canonical-owner first and consumers second, then `grep -rn '<old wording>' <root>` (zero hits is the only acceptable result; a hit means a consumer was missed). `progress.md` and per-sprint Progress sections stay in lockstep — edit one, edit the other in the same pass; the master wins on conflict.
 
-### Step 5 — Re-read the plan end-to-end
+### Step 5 — Re-read the affected files and the surfaces they touch
 
 Rewriting one file can silently invalidate wording elsewhere. Re-read the affected files, plus:
 
@@ -200,7 +204,7 @@ Don't auto-progress to the next round. Each round is a discrete user-driven step
 
 ## Anti-patterns specific to iteration
 
-- **Don't stop after resolving a sprint's blocking Open questions when you have enough information to lock it.** Resolving the questions and writing the Locked Decisions / Architecture notes / Implementation Steps / Step Dependency Chart / Acceptance checklist is one round, not two. Stopping early forces the user to re-invoke the skill just to ask you to do the next obvious thing. The exception is when locking would require inventing answers — then surface the gap as a new Open question instead. See Step 2's "Aggressive locking" guidance.
+- **Don't stop after resolving a sprint's blocking Open questions when you have enough information to lock it.** Resolving the questions and locking the sprint is one round, not two — see Step 2's intro and "Aggressive locking." The exception is when locking would require inventing answers — then surface the gap as a new Open question instead.
 - **Don't skip the completeness assessment.** Mandatory every round.
 - **Don't skip the `status.md` entry** when the round was small. Every round earns one entry.
 - **Don't put a Decisions log or Status section inside `overview.md`.** Those live directly in the feature root as `decisions.md` and `status.md`. Any "Decisions log" / "Status" heading inside `overview.md` is a planning bug — move the content out, then delete the heading.

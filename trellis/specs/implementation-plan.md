@@ -105,7 +105,7 @@ Each subsequent round picks one (or a small number) of sprint files and pushes i
 
 - Lock the sprint's Key Design Decisions table.
 - Add Architecture notes ("Why X" subsections) for non-obvious choices.
-- Sketch the API surface, request/response shapes, and error tables (when applicable).
+- Sketch the Public surface, request/response shapes, and error tables (when applicable).
 - Decompose the sprint into ordered steps with concrete Actions / Deliverables / Verification.
 - Add a Step Dependency Chart and an Acceptance Checklist.
 - Update the master `progress.md` with the new step list for that sprint.
@@ -201,7 +201,7 @@ Rules:
 - `status.md` is required. It is the plan-level round-by-round audit trail — the doc's "git log." Sprint-scoped Status / Feedback-incorporated entries continue to live inside their sprint files; `status.md` holds the plan-wide narrative. See "`status.md` anatomy" for the format.
 - `progress.md` is required. It is the master checklist that humans scan to see "what's done."
 - `post-mortem.md` is created the first time a sprint's final step is checked off — not at scaffold time. It accrues a distilled, sprint-keyed entry per shipped sprint. See "`post-mortem.md` anatomy" for the format.
-- Sprint files are zero-padded numerically prefixed (`01-`, `02-`, …) so filename order matches execution order. Re-numbering on a re-slice is fine.
+- Sprint files are zero-padded numerically prefixed (`01-`, `02-`, …) so filename order matches execution order. Re-numbering on a re-slice is fine — **except for shipped sprints, which are frozen** (see § "When sprint slicing changes mid-stream").
 - Sprint file names are `<NN>-<short-kebab-topic>.md` — short enough that the index table reads cleanly, descriptive enough that a `git log` line is meaningful.
 - One file per sprint. Don't split a sprint across two files; if a sprint is too large to fit comfortably in one file, that's a re-slice signal.
 - **The overview file is `overview.md` — it is not numbered, not prefixed, not a sprint.** Only sprint files take the `NN-` prefix. Numbered prefixes on `overview.md`, `decisions.md`, `status.md`, `progress.md`, or `post-mortem.md` are wrong.
@@ -468,7 +468,7 @@ Rules:
 
 ## Sprint document anatomy
 
-Every sprint file follows the same skeleton. Drop sections that don't apply (a no-API sprint has no API surface section); add domain-specific sections where the work demands them.
+Every sprint file follows the same skeleton. Drop sections that don't apply (a sprint with no external surface has no Public surface section); add domain-specific sections where the work demands them.
 
 ### 1. Title & overview pointer
 
@@ -893,6 +893,7 @@ Re-slicing is normal. When it happens:
 
 - Update `overview.md`'s sprint roster, dependency graph, and any rationale paragraphs that reference the old shape.
 - Rename / split / fold sprint files. Renumber if the file ordering would otherwise lie about execution order.
+- **Shipped sprints are frozen from renumbering.** A sprint whose final step is `[x]` in `progress.md` keeps its number, filename, and checkboxes as-is — its identity is part of the shipped record, and renaming it would orphan the `post-mortem.md` section, the git history, and any external reference keyed to that number. Re-slicing renumbers only unshipped sprints; when a re-slice would collide with a shipped sprint's number, renumber the unshipped sprints around it rather than renaming the shipped file.
 - Update `progress.md` to reflect the new structure.
 - Add a Status entry **to `status.md`**: "Round 4: re-sliced 06 into 06-resolve-type and 07-deduplicate; re-numbered 07–10 → 08–11. R3's combined-worker decision superseded."
 - Cross-references in adjacent sprints get updated in the same round.
@@ -1015,6 +1016,26 @@ The implementation plan is a *system* of files that must agree with each other. 
 - **Open-question ownership.** Each open question (overview-level + sprint-level) names the sprint(s) it blocks; it doesn't cite a sprint that doesn't exist, and the blocked sprint acknowledges it.
 - **Round-numbering coherence.** Decisions-log round tags across `decisions.md` and the sprint files use one coherent plan-level scheme (the counter is incremented in `status.md`); flag impossible tags (a sprint `(R6)` entry when `status.md` never reached Round 6).
 - **Acceptance-checklist coverage.** Each sprint's Acceptance checklist covers every documented failure mode in its Public surface, every architectural invariant it touched, every "Subtle bug" gotcha in its steps, and the cross-sprint convention items (build / type / test / lint green; spec sync; tests at the right layer).
+
+---
+
+## Around-corner concern checklist
+
+A stack-agnostic checklist of the failure modes a reviewer (and a planning round's sanity pass) should walk for any sprint that ships lifecycle, integration, or async behavior. These are the substance concerns that hide *inside* a sprint's design — distinct from the seam-level drift the cross-sprint coherence checklist catches. The list is shared: `impl-review` walks it per sprint, and a flesh-out round should self-check against it before declaring a sprint execution-ready.
+
+- **Race conditions.** Two events arriving in either order. Two workers running the same task. A request landing during a state transition. Webhook + sync racing the same external state change.
+- **Idempotency gaps.** Operations that re-fire on retry, pod restart, debounce flush, or manual re-sync, where the second fire isn't a no-op. Especially: external API calls or worker tasks not gated by a deterministic idempotency key.
+- **Concurrency / transaction boundaries.** Read-before-BEGIN / write-after-COMMIT discipline. Cross-service calls inside transactions. Locks held across IO. Eager + worker-safety-net patterns where one is missing.
+- **Partial success.** Financial action ✓, notification ✗ — vs. — financial action ✗, notification ✓ — vs. — both succeed but the row write failed. Each combination needs an answer.
+- **External-system assumptions.** Behavior assumed about a partner API that isn't pinned in their docs / sandbox / contract. Webhook delivery semantics taken for granted (ordering, at-least-once, debounce).
+- **Migration / rollout risk.** Schema changes without deploy-order discipline. Backfill assumptions. Missing feature-flag / kill-switch. Unsafe column adds (NOT NULL on populated tables, etc.).
+- **Backwards compatibility.** Old clients seeing new state; new clients seeing old state. API contract changes without versioning. Data-shape evolution without a migration story.
+- **Privacy / authorization.** Who can see what. Cross-tenant leakage. Soft-deleted rows reappearing. Data leaving its owning service. Access scope of new methods (`internal_function` vs. `public_api`, or the project's equivalent).
+- **Observability.** Can support / oncall debug a failure from logs alone? Structured event-log fields named? Error paths emit useful context? Metrics for the cases that matter?
+- **Scale boundaries.** "Acceptable at Tier 0" claims — are they quantified? What's the breaking point? What's the trigger to revisit?
+- **GC / orphan rows.** Eager cleanup paths plus a worker safety net? What happens to attached child rows when the parent transitions terminal? What happens to references in peer services?
+
+The *categories* are stack-agnostic; the *content* of each in your project depends on the architecture extracted from the project's conventions. A frontend or CLI project re-reads these through its own failure modes (stale closures, signal-handler reentrancy, cache-key collisions) — the posture translates even when the examples don't.
 
 ---
 
@@ -1153,7 +1174,7 @@ The slices are not equal in size. They are equal in shippability.
 
 ## How to read each sprint
 
-Every sprint follows the same skeleton: Goal → Prerequisites → Deliverables → Out of scope → Locked decisions → Architecture notes → API surface (when applicable) → Progress → Implementation Steps with verification → Step Dependency Chart → Acceptance checklist. Implementers should be able to pick up a sprint and execute it without re-reading the design doc, though the design doc is the source of truth for any conflict.
+Every sprint follows the same skeleton: Goal → Prerequisites → Deliverables → Out of scope → Locked decisions → Architecture notes → Public surface (when applicable) → Progress → Implementation Steps with verification → Step Dependency Chart → Acceptance checklist. Implementers should be able to pick up a sprint and execute it without re-reading the design doc, though the design doc is the source of truth for any conflict.
 ```
 
 ### `NN-<topic>.md`
@@ -1193,7 +1214,7 @@ Every sprint follows the same skeleton: Goal → Prerequisites → Deliverables 
 - **Why <choice>.** …
 - **Why <other choice>.** …
 
-## API surface
+## Public surface
 
 ### `<METHOD> <path>`
 

@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 Skill prompt for an LLM agent. Activated when the user wants to start a new **design plan** from scratch — i.e., Round 1 of the design plan's iteration cycle.
 
-This skill stops at the end of Round 1. Subsequent rounds (resolving open questions, fleshing out schema / API surface / lifecycle / cross-service contracts) follow the round-by-round mechanics in [design-plan.md](../specs/design-plan.md). After Round 1 lands, hand the conversation back to the user for Round 2 via the `design-iterate` skill.
+This skill stops at the end of Round 1. Subsequent rounds (resolving open questions, fleshing out schema / API surface / lifecycle / cross-service contracts) follow the round-by-round mechanics in [design-plan.md](../specs/design-plan.md) — including the Decisions-log and Status-log compression discipline (§14 / §15) that keeps both logs skimmable as rounds accumulate. After Round 1 lands, hand the conversation back to the user for Round 2 via the `design-iterate` skill.
 
 ---
 
@@ -36,7 +36,7 @@ The user supplies a single root directory as `<root>` (absolute or repo-relative
 
 Before starting, the agent must have:
 
-1. **The root directory `<root>`.** Create it if it doesn't exist. The output file is always `<root>/design.md`. If a file already exists at that path, warn before overwriting.
+1. **The root directory `<root>`.** Create it if it doesn't exist. The output file is always `<root>/design.md`. If a file already exists at that path, warn **and stop for explicit confirmation** before overwriting — never overwrite an existing `design.md` without the user's go-ahead.
 2. **The user's initial briefing.** The high-level shape of what they want to design — the domain, the canonical terminology if any drifts, the rough scope, the load-bearing assumptions they already have. This may be supplied along with the skill invocation, or arrive after the agent prompts for it (see Step A.1).
 3. **The design-plan authoring guide.** Read [design-plan.md](../specs/design-plan.md) end-to-end before producing files — the document anatomy, section ordering, tone, and supersession rules in that guide are mandatory.
 4. **Project context.** Skim the project's `CLAUDE.md`, `AGENTS.md` (or equivalent) for terminology, conventions, the project's typical service / system shape, banned patterns, and authorization rules (e.g., schema-edit gating). The cross-references list and the foundational decisions should reflect actual project conventions, not generic ones.

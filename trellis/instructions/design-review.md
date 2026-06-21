@@ -13,7 +13,7 @@ You are **not** the author. You do not rewrite the plan. You do not unilaterally
 
 You are reviewing the design plan at `<root>/design.md` and saving your review to `<review-output-path>`. Extract both paths from the user's natural-language invocation. If the user gave a path ending in `design.md`, treat its parent directory as `<root>`.
 
-If `<root>` is missing, ask for it and stop. If `<root>/design.md` does not exist, stop and report the missing file.
+If `<root>` is missing, ask for it and stop. If `<root>/design.md` does not exist, stop and report the missing file. If `<root>/design.md` exists but has no rounds yet — an empty stub, or a pre-Round-1 skeleton with no Status entries — report that the plan isn't ready for review and stop; there's nothing to audit until at least Round 1 has landed.
 
 If `<review-output-path>` is missing, ask for it and stop.
 
@@ -199,7 +199,7 @@ Always attach a recommendation. The feedback-integration step that consumes this
 
 The review document at `<review-output-path>` is the durable artifact. But the open-question dispositions must *also* be surfaced directly in your chat response, so the human running the review sees them without opening the file.
 
-After writing the review, end your chat response with an **Open questions** summary — a list with one entry per open question (both the Open questions section and any decisions the body still frames as open). For each entry:
+After writing the review, end your chat response with an **Open questions** summary — a list with one entry per open question (both the Open questions section and any decisions the body still frames as open). **Dedup:** if a body-framed-open item already appears in the Open questions section, list it once. For each entry:
 
 - **The question** — one line.
 - **Disposition** — one of:
