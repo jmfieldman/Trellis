@@ -21,7 +21,7 @@ Read and apply the **Trellis instruction precedence chain** before executing thi
 1. **Trellis instruction files and additional user instructions** per "Additional Instructions" above.
 2. **Your step's full text** in the sprint file: `## Step <N> — <title>` with Goal / (optional Pre-step) / Actions / Deliverables / Verification.
 3. **Sprint framing** (skim): Goal, Prerequisites, Out of scope, Key design decisions, Architecture notes — only the rows that touch your step.
-4. **Step Dependency Chart** in the sprint file. Confirm no upstream step is unchecked. If one is, stop and report (defense in depth — the orchestrator should have caught this).
+4. **Step Dependency Chart** in the sprint file. Confirm no upstream step is unchecked. If one is, stop and report. This check is **yours alone** — the orchestrator validates only Progress *range membership* (that Step `N` is in the requested range and not already `[x]`); it deliberately does not read step bodies or the Step Dependency Chart, so a dependency violation reaches you un-caught.
 5. **`progress.md`** for this sprint — confirm the step list / titles match the sprint file (you're about to edit both).
 6. **Targeted reads of the codebase** — the files your Actions name plus their immediate neighbors. Match the project's existing patterns; the step's code samples are illustrative, adapt to what's actually there.
 7. **The project's conventions doc** — banned patterns, layering rules, schema / migration authorization, test-location conventions, pre-commit hook behavior, and which package manager / task runner the project uses (`yarn` / `npm` / `pnpm` / `bun` / `make` / `just` / etc.).
@@ -42,6 +42,22 @@ Create `<execution-record-path>` (and any missing parent directories — typical
 **Started:** <ISO-8601 UTC timestamp>
 **Executor:** <model / name if known, otherwise "unspecified">
 ```
+
+**If the file already exists** — the deterministic path `<root>/reviews/<sprint-stem>/step-<N>.md` means a re-invocation of an already-attempted step (e.g., the prior attempt stopped on a reviewer block or a plan-wrongness halt) lands on the same path. Do **not** overwrite or truncate it: the prior attempt's record is part of the audit trail. Instead **append** a run divider and a fresh run header, then write this attempt's sections below it:
+
+```markdown
+
+---
+
+# Step <N> — <title>: execution record (re-run <ISO-8601 UTC timestamp>)
+
+**Sprint:** `<sprint file basename>`
+**Branch:** `<branch>`
+**Started:** <ISO-8601 UTC timestamp>
+**Executor:** <model / name if known, otherwise "unspecified">
+```
+
+All "append to the record" instructions below then write under this re-run header. Never rotate to a numbered sibling file (`step-<N>-2.md`) — the orchestrator only knows the one deterministic path.
 
 You will append to this file across the whole step run (Verification output, Review rounds, Triage decisions, Final state). It is committed alongside the doc-update commit at the end. The file is the durable audit trail — anything that lives only in chat is lost when the conversation ends.
 
@@ -202,7 +218,7 @@ Dispatch the reviewer yourself when your harness allows it — it keeps the orch
 - **Concrete blocker** (dispatch primitive errors when invoked, reviewer brief path unreachable, any other mid-spawn failure): stop with `status: stopped` and a `stop_reason` quoting the failure mode. The orchestrator surfaces; the user picks the next move.
 - **Nested dispatch not exposed at all** (verified per the discovery rule, not assumed from one index): do **not** stop — follow the "Orchestrator-dispatched review fallback" section below. The orchestrator dispatches the reviewer on your behalf; the audit property (fresh-context reader) is preserved.
 
-Use the `Agent` tool with `subagent_type=general-purpose`. Pass the round number — `1` for the initial pass, `2` for any follow-up after fixes:
+Use the `Agent` tool with `subagent_type=general-purpose`. Pass the round number — `1` for the initial pass, `2` for any follow-up after fixes. The commit range you pass is **always the full step** (`<first SHA from this step>^..HEAD`), identical in round 1 and round 2 — round 2 re-reviews the whole step, not just the fix commits, because a fix can regress something the first pass cleared. The `<first SHA from this step>` is the SHA of the step's *first* commit; it does not advance when you add fix commits:
 
 ```
 You are reviewing one step of a trellis implementation-plan sprint that was just implemented.
@@ -218,8 +234,8 @@ Parameters:
 - Feature root: <root>
 - Step number under review: <N>
 - Step title: <title>
-- Commit range to review (inclusive): <first SHA from this step> … <HEAD>
-  (Reconstruct the diff with: `git diff <first SHA>^..HEAD`)
+- Commit range to review: the step's first commit through `HEAD`, including the first commit
+  (Reconstruct the diff with: `git diff <first SHA>^..HEAD` — the trailing `^` includes the first commit; never pass the bare `<first SHA>..HEAD`, which drops it)
 - Feature branch: <branch>
 - Round number: <1 or 2>
 - Output-file path: <execution-record path the orchestrator gave you>
@@ -244,7 +260,7 @@ Match the reviewer's verdict to your posture:
 | **`clean`**               | No rework. Proceed to "Updating the sprint document."                                                                                                                                                     |
 | **`in_step_fixes`**       | Address every `Significant` finding in a follow-up commit on this step. Re-review only if your fixes are non-trivial (see threshold below). `Suggestion`s are judgment calls.                              |
 | **`material_rework`**     | Address every `Critical` finding before you commit anything else. Then re-review (round 2). If round-2 verdict is still `material_rework`, stop and surface — the issue is bigger than this step's scope. |
-| **`reviewer_blocked`**    | Stop immediately. Set `status: stopped` in your summary; `stop_reason` is the reviewer's blockage as quoted. Do not invent a fix or proceed without a successful review. The orchestrator surfaces.       |
+| **`reviewer_blocked`**    | Stop. First **commit the execution record** (with the reviewer's appended blocked section) so the tree is clean and the audit survives — but leave Progress **unchecked** in both the sprint file and `progress.md`: the implementation landed but never passed review, so the step is not done. Set `status: stopped`; `stop_reason` quotes the reviewer's blockage. If the block is **size-driven** (the reviewer flagged the diff as too large to review), the `stop_reason` is `step too large — re-slice via impl-iterate` (carry the remedy, not just the symptom). Populate `review_files` with the execution-record path so the orchestrator can surface the partial state. Do not invent a fix or proceed without a successful review. |
 
 ### Triage by severity, within a verdict
 
@@ -293,10 +309,20 @@ Your responsibilities under this fallback:
 - **Implement, verify, and commit** as usual. Your implementation commit(s) must leave the working tree clean.
 - **Create the execution-record file** at the path the orchestrator gave you, populated through the Verification section (everything you would have written before spawning the reviewer). Leave a placeholder where the `## Review` section will go — the orchestrator-dispatched reviewer appends there.
 - **Do NOT update the Progress checkboxes** in either the sprint file or `progress.md`. In this fallback the orchestrator owns Progress finalization (after it dispatches the reviewer, triages findings, and routes any in-step fixes back to you).
-- **Do NOT update Deviations or Post Mortem** sections in the sprint file yet — those land alongside Progress in the orchestrator's finalization commit. If you applied a deviation during implementation, note it in the execution record so the orchestrator (or a round-2 you) can reconcile.
-- **Return your YAML hand-back** with `status: done`, `review_verdict: not_run`, `review_rounds: 0`, and `review_files` listing the execution-record path. The orchestrator interprets `not_run` as "executor handed off cleanly — I'll dispatch the reviewer."
+- **Do NOT update Deviations or Post Mortem** sections in the sprint file yet — those land alongside Progress in the orchestrator's finalization commit. But the orchestrator is forbidden from reading code, so it cannot *derive* their content: **you** must record the candidates in the execution record during your impl commit, in a `### Deviation & Post Mortem candidates (fallback)` subsection, so the orchestrator can transcribe them verbatim into the sprint doc. Write each Deviation candidate as a one-sentence entry (with the sprint-doc surface it belongs in — top-of-sprint vs. inline-next-to-step) and each Post-Mortem candidate as a one-sentence bullet. If you have neither, write `_None._` so the orchestrator knows you considered it rather than forgot.
 
-If the orchestrator then re-dispatches you with reviewer findings (round-1 results passed in as additional context), apply the in-step fixes per the Triage rules above, append a "Fixes applied — round 1" section to the execution record, commit, and return YAML with `review_verdict: in_step_fixes`, `review_rounds: 1`. The orchestrator handles dispatching round 2 (if non-trivial) and the final Progress / Deviations / Post Mortem commit.
+  ```markdown
+  ### Deviation & Post Mortem candidates (fallback)
+
+  **Deviations applied during implementation:**
+  - [top-of-sprint | inline Step <N>] <one sentence; identifiers in backticks>
+
+  **Post Mortem candidates:**
+  - <one sentence>
+  ```
+- **Return your YAML hand-back** with `status: done`, `review_verdict: not_run`, `review_rounds: 0`, `review_files` listing the execution-record path, and `reviewer_wrong_count: 0` (no review ran yet, so there is nothing to triage — the count is genuinely zero, not unknown). Populate `deviations` and `deferred_to_post_mortem` from the candidates you just recorded so the orchestrator's pre-review reading matches the record. The orchestrator interprets `not_run` as "executor handed off cleanly — I'll dispatch the reviewer."
+
+If the orchestrator then re-dispatches you with reviewer findings (round-1 results passed in as additional context), apply the in-step fixes per the Triage rules above, append a "Fixes applied — round 1" section to the execution record (including the `### Triage — round 1` subsection with any **Reviewer-wrong** findings, exactly as on the default path), commit, and return YAML with `review_verdict: in_step_fixes`, `review_rounds: 1`, and `reviewer_wrong_count` set from that triage. Fold any new deviations / deferred concerns into the same candidates subsection. The orchestrator handles dispatching round 2 (if non-trivial) and the final Progress / Deviations / Post Mortem commit, transcribing your recorded candidates and reading the reviewer-wrong count from your triage.
 
 This fallback exists so the audit pattern survives harnesses that don't allow nested dispatch. It does not relax any other invariant — clean working tree, real commits, durable execution record, no self-review.
 
@@ -304,7 +330,7 @@ This fallback exists so the audit pattern survives harnesses that don't allow ne
 
 ## Updating the sprint document
 
-This section applies when you ran the review yourself (the default path). If you handed the reviewer off to the orchestrator per the "Orchestrator-dispatched review fallback" section, the orchestrator owns these surfaces — do **not** edit Progress, Deviations, or Post Mortem in your hand-back. You may (and should) populate the execution record's Verification section in your impl commit; the rest lands later.
+This section applies when you ran the review yourself (the default path). If you handed the reviewer off to the orchestrator per the "Orchestrator-dispatched review fallback" section, the orchestrator owns the sprint-doc surfaces — do **not** edit Progress, Deviations, or Post Mortem in your hand-back. You still populate the execution record's Verification section *and* the `### Deviation & Post Mortem candidates (fallback)` subsection in your impl commit (the orchestrator can't read code to derive them, so it transcribes your recorded candidates); only the sprint-doc edits land later, in the orchestrator's finalization commit.
 
 After implementation, review, and any follow-up commits are in place, edit four surfaces — typically in one final commit so the docs land alongside the code. (Mid-step edits to these surfaces are also fine; this is the last call where you reconcile and commit.)
 
@@ -402,8 +428,10 @@ Field semantics:
 - `status: stopped` is for any controlled halt: load-bearing plan-wrongness, authorization gate, hook persistently failing, round-2 review still material, reviewer-blocked. Always populate `stop_reason`.
 - `commits` lists every SHA you produced for this step in order. Empty list when `status: stopped` before the first commit.
 - `verification_status: failed` means a Verification check failed and you couldn't make it pass — this should pair with `status: stopped`.
+- `verification_status: unrunnable` means the Verification block named *only* checks you cannot run in this environment, so the step's correctness can't be established here — this is plan-wrongness and **must** pair with `status: stopped` (same as `failed`). It is distinct from `partial`, which pairs with `status: done` when *some* checks ran and you logged runnable replacements for the rest. Never hand back `unrunnable` with `status: done`.
 - `review_verdict: not_run` has two valid uses: (a) paired with `status: stopped` when you halted before invoking the reviewer, or (b) paired with `status: done` when you used the "Orchestrator-dispatched review fallback" path — clean commits in place, execution record populated through Verification, Progress intentionally left untouched, reviewer to be dispatched by the orchestrator.
 - `review_files` lists every execution-record file you wrote to (typically just one). The orchestrator will verify each is committed.
+- `reviewer_wrong_count` is the number of reviewer findings you triaged as Reviewer-wrong, taken from your `### Triage` subsection(s). It is `0` — not blank or unknown — when no review ran (including the initial `not_run` hand-back of the orchestrator-dispatched fallback, where the reviewer runs later under the orchestrator).
 
 The detail behind every field lives in the commits, the sprint file, and the execution-record file. The YAML is the parseable handshake.
 

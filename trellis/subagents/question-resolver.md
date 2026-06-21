@@ -50,7 +50,7 @@ The motto of the implementation-plan layer is *lock the decision, surface it as 
 Forcing a confident answer onto a question that doesn't have one is the failure mode this whole skill is calibrated against. Two refusal verdicts:
 
 - **`escalate-as-is`** — a genuine judgment call with real skin in the game (product semantics, scope, cost) and no codebase-derivable answer. You do **not** manufacture a recommendation. But you **still** return a concise option list (A/B, sometimes C) with one-line pros/cons, so the user can answer in one read instead of from a blank page. Set `needs_human_because` to the specific reason ("needs product input on retention window" beats "judgment call").
-- **`route-to-design`** — the question is a gap in *what the system is*, not *how it's built*. Answering it in an implementation file would make a design decision in the wrong document. Return the concise options anyway (they help the design round), set `routes_to_design_because`, and do not recommend.
+- **`route-to-design`** — the question is a gap in *what the system is*, not *how it's built*. Answering it in an implementation file would make a design decision in the wrong document. Return the concise options anyway (they help the design round), set `routes_to_design_because`, and do not recommend. **This verdict is valid only when your doc type is `impl`** (`overview.md` or a sprint file). When your doc type is **`design`**, the question already lives in the design plan — there is no higher document to route it to — so `route-to-design` is incoherent; resolve it (`recommend`) when the answer is derivable, or `escalate-as-is` when it's a genuine judgment call. Never emit `route-to-design` for a `design` file.
 
 The bar for refusing is "I have enough information to answer this honestly" — not "I could produce something plausible." But the inverse failure is just as real: do not route a question to design or escalate it when the conventions or the design plan already answer it. If the answer is derivable, derive it.
 
@@ -90,15 +90,20 @@ Return your verdict to me as your final message per your brief. Be terse and con
 
 Don't run the reviewer in the background — its verdict gates your hand-back.
 
-### Incorporate the reviewer's verdict (mechanical)
+### Incorporate the reviewer's verdict — reviewer-verb → `reviewer_verdict` crosswalk (mechanical)
 
-| Reviewer verdict | What you do                                                                                                                                  |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`sound`**      | No change. Hand back as-is, `reviewer_verdict: sound`.                                                                                        |
-| **`revise`**     | The reviewer found a factual error (misread convention, hallucinated precedent, locked-decision conflict). Re-investigate, fix the basis, and re-form the recommendation. Hand back the corrected proposal, `reviewer_verdict: revised`, with `reviewer_note` naming what changed. You need not re-spawn the reviewer. |
-| **`dissent`**    | The reviewer would weigh the judgment differently but found no error. Keep your recommendation, but carry the dissent forward verbatim in `reviewer_note` — it rides along to the user. Do **not** bury it. `reviewer_verdict: dissent`. |
-| **`escalate`**   | The reviewer thinks your verdict is misclassified. If it's right (you over-reached on a judgment call, or you punted something answerable), flip your `verdict` accordingly, set `reviewer_verdict: reclassified`, and carry the reviewer's reasoning in `reviewer_note`. If you disagree, keep your verdict, set `reviewer_verdict: dissent`, and record the reviewer's position in `reviewer_note`. |
-| **`blocked`**    | The reviewer couldn't run. Hand back `reviewer_verdict: not_run` with the reason; the orchestrator decides whether to re-dispatch. |
+The reviewer **emits** one of `sound | revise | dissent | escalate | blocked` (per [question-reviewer.md](./question-reviewer.md) § "Verdict"). Your hand-back's `reviewer_verdict` field uses a **different** vocabulary — `sound | revised | dissent | reclassified | not_run`. They are not the same words; this table is the canonical crosswalk between them. The orchestrator's reviewer-dispatch fallback ([resolve-open-questions.md](../instructions/resolve-open-questions.md) § "Reviewer-dispatch fallback") folds the verdict in using this same crosswalk, so a verdict means the same thing whoever dispatched the reviewer.
+
+| Reviewer emits | → your `reviewer_verdict` | What you do                                                                                                                                  |
+| -------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`sound`**    | `sound`                   | No change. Hand back as-is.                                                                                                                   |
+| **`revise`**   | `revised`                 | The reviewer found a factual error (misread convention, hallucinated precedent, locked-decision conflict). Re-investigate, fix the basis, and re-form the recommendation. Hand back the corrected proposal with `reviewer_note` naming what changed. You need not re-spawn the reviewer. |
+| **`dissent`**  | `dissent`                 | The reviewer would weigh the judgment differently but found no error. Keep your recommendation, but carry the dissent forward verbatim in `reviewer_note` — it rides along to the user. Do **not** bury it. |
+| **`escalate`** (you agree)    | `reclassified` | The reviewer is right that your verdict is misclassified (you over-reached on a judgment call, or you punted something answerable). Flip your `verdict` accordingly and carry the reviewer's reasoning in `reviewer_note`. |
+| **`escalate`** (you disagree) | `dissent`      | You stand by your classification. Keep your `verdict`, and record the reviewer's position in `reviewer_note` so it still reaches the user. |
+| **`blocked`**  | `not_run`                 | The reviewer couldn't run. Hand back with the reason in `reviewer_note`; the orchestrator decides whether to re-dispatch. |
+
+Note there is no `escalate` value in `reviewer_verdict` — an `escalate` from the reviewer always lands as either `reclassified` (you accepted it) or `dissent` (you didn't), never passed through verbatim.
 
 ---
 

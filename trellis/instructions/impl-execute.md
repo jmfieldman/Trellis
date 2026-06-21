@@ -128,6 +128,8 @@ For the requested range `[from..to]`:
 - If the sprint file's `## Progress` checklist marks **any** step in the range as `[x]` (completed), **skip** that step and continue with the rest of the range. Note skipped steps in the final summary so the user can see why their range shrank.
 - Verify the sprint file's `## Progress` and the parent `progress.md` agree on which boxes are checked for this sprint. If they disagree, stop and follow the recovery path below.
 
+**"Final step" tracks the last *dispatched* step after skip-filtering**, not the literal last step number in the requested range. If the literal last step of the range is already `[x]` and gets skipped, the last step that *actually dispatches* inherits final-step status. This matters: the final dispatched step loses the intermediate-step broken-state exception — it must leave the repo passing all gates, because no later step in this invocation will repair an intermediate breakage. Compute "is final step" against the skip-filtered dispatch list, and pass `true` only to the genuinely-last dispatched step.
+
 ### 4a. Recovery path when `progress.md` and the sprint file's Progress drift
 
 When the two files disagree, the orchestrator does **not** auto-reconcile. Mechanical reconciliation could mask a real planning issue (e.g., a sprint that was re-sliced but the corresponding `progress.md` regen never landed).
@@ -159,6 +161,10 @@ intends, which is a human / planning decision.
 
 Then stop. Do not auto-reconcile.
 
+### 5. Single-writer expectation
+
+This skill is a **single-writer** operation on the feature root. It commits per step, mutates the deterministic execution-record paths under `reviews/<sprint-stem>/`, and edits the shared `progress.md` and sprint Progress sections — none of which is concurrency-safe. Do not run a second `impl-execute` against the same `<root>` (or the same branch) while this one is in flight, and do not run it concurrently with a planning skill that writes the same files (`impl-iterate`, `impl-integrate-feedback`, or `resolve-open-questions`) — two writers will race on `progress.md` and on the record paths, and the linear-commit assumption the loop depends on breaks. There is no lock to enforce this; it's an operational expectation. If the pre-flight working-tree-clean check fails because another run is mid-flight, that's the signal to wait, not to clean the tree.
+
 ---
 
 ## Dispatching steps
@@ -180,7 +186,7 @@ These pre-checks are cheap insurance against a subagent leaving partial work beh
 
 Use the `Agent` tool with `subagent_type=general-purpose`. Pre-compute one path before spawning:
 
-- **Execution-record path** for this step: `<root>/reviews/<sprint-stem>/step-<N>.md` where `<root>` is the sprint file's parent directory and `<sprint-stem>` is the sprint file's basename without the `.md` extension. The executor will create the file (and parent directories) and use it as the durable home for verification output, review rounds, triage decisions, and reviewer-wrong findings. The orchestrator does not create the file — it just passes the path.
+- **Execution-record path** for this step: `<root>/reviews/<sprint-stem>/step-<N>.md` where `<root>` is the sprint file's parent directory and `<sprint-stem>` is the sprint file's basename without the `.md` extension. The executor will create the file (and parent directories) and use it as the durable home for verification output, review rounds, triage decisions, and reviewer-wrong findings. The orchestrator does not create the file — it just passes the path. The path is deterministic, so re-running an already-attempted step lands on the same file; the executor brief tells it to **append a new run section under a re-run header rather than overwrite** the prior attempt's record, so a re-invocation never destroys the earlier audit trail.
 
 The spawn prompt is short and self-contained:
 
@@ -198,7 +204,7 @@ Parameters for this invocation:
 - Feature root: <absolute-path-to-parent-of-sprint-path>
 - Step number to execute: <N>
 - Step title (for sanity-check against the sprint file): <title from sprint file>
-- Is final step in requested range: <true if N is the last dispatched step in this invocation, else false>
+- Is final step in requested range: <true only if N is the last *dispatched* step in this invocation after skip-filtering already-[x] steps, else false — see "Final step tracks the last dispatched step" above>
 - Feature branch: <current branch name>
 - Reviewer brief (you will spawn a reviewer subagent yourself): <absolute-path-to-trellis-dir>/subagents/step-reviewer.md
 - Execution-record path: <absolute-path-to-root>/reviews/<sprint-stem>/step-<N>.md
@@ -238,12 +244,18 @@ Do not run the subagent in the background — its result gates the next step.
 When the subagent returns:
 
 1. **Parse the YAML summary block.** If the response is missing the block or is malformed, stop and report — the subagent violated its summary contract.
-2. **If `status: stopped`**, surface the `stop_reason` to the user and stop the loop. Do not auto-retry. The subagent halted intentionally; the user picks the next move (re-invoke, manually fix, plan-round, etc.).
+2. **If `status: stopped`**, surface the `stop_reason` to the user and stop the loop. Do not auto-retry. The subagent halted intentionally; the user picks the next move (re-invoke, manually fix, plan-round, etc.). Before stopping, recover and report the partial state so the user isn't left guessing:
+   - Run `git status --porcelain=v1` and report whether the tree is **clean** or **dirty** (show the offending lines if dirty — a dirty tree on a stop means the executor left work behind and the user must clean it before re-invoking).
+   - Report **which commits landed** this step (the `commits:` list from the hand-back, cross-checked against `git log --oneline`) — a stop can happen before *or* after commits exist, and the user needs to know which.
+   - If `review_verdict: reviewer_blocked`, state explicitly that **the execution record is committed but Progress is left unchecked** in both the sprint file and `progress.md` — the implementation landed but never passed review, so this step is *not* done. Name the execution-record path (from `review_files:`) so the user can read the reviewer's blockage. If the `stop_reason` names a size-driven block, relay its remedy ("step too large — re-slice via `impl-iterate`") verbatim.
+   - If `verification_status` is `failed` or `unrunnable`, confirm it paired with this `stopped` (it must — see the executor brief's field semantics); if an executor hands back `failed`/`unrunnable` with `status: done`, treat that as a contract violation and report it.
 3. **If `status: done` and `review_verdict` is one of `clean | in_step_fixes | material_rework`** (the executor ran the review itself), run all of these objective checks — every one must pass or the loop stops:
    - `git status --porcelain=v1` is empty. If the subagent left uncommitted changes, stop and report — the subagent violated its commit contract.
    - `git log --oneline -5` shows at least one new commit since the pre-step state. If not, stop and report — the subagent did not actually commit. The commit list should match the `commits:` field in the YAML summary.
    - The sprint file's `## Progress` section now shows Step `N` as `[x]`. The parent `progress.md` matches. If either is unchecked or they disagree, stop and report — the subagent skipped its progress-update obligation.
    - Each path in `review_files:` exists and is committed (a `git ls-files <path>` returns a hit). If a referenced execution-record file is missing or untracked, stop and report.
+   - **`verification_status` is consistent with `status: done`.** `all_passed` and `partial` are the only values that may pair with `done`. If the hand-back pairs `done` with `failed` or `unrunnable`, that's a contract violation — stop and report (those values must pair with `status: stopped` per the executor brief).
+   - **Intermediate-gate exception is substantiated.** If this is **not** the final dispatched step and `verification_status: partial`, read the execution-record file (a planning/review file — within orchestrator scope) and confirm it contains an `### Expected intermediate gate failures` subsection naming the expected failures and the later step that repairs them. If that subsection is absent, stop and report — a non-final `partial` without it is an unexplained gate failure, not a sanctioned intermediate-step exception. (A final step may never hand back `partial` on the strength of this exception; if it does, stop.)
 4. **If `status: done` and `review_verdict: not_run`**, the executor used the orchestrator-dispatched review fallback (its harness does not expose nested-subagent dispatch — see the executor brief). Follow the fallback flow below instead of the default validation: implementation is committed, but the reviewer pass and Progress finalization are now your responsibility.
 
 If every check in the default validation path passes, proceed to the next step.
@@ -255,13 +267,16 @@ If any check fails, do **not** auto-retry. Report what you found and let the use
 Enter this path only when the executor returned `status: done` with `review_verdict: not_run`. The audit property — fresh-context reader of the diff — is preserved because **you** are dispatching the reviewer from a context that has not seen the executor's implementation reasoning. You may want to keep this loop tight; some intermediate validation differs from the default path:
 
 1. **Pre-review state check.** `git status --porcelain=v1` is empty; the commits in the YAML hand-back exist; the execution-record file at the path in `review_files:` exists and is committed (verified via `git ls-files`); the sprint file's Progress and `progress.md` are **still unchecked** for Step `N` (the executor was told to leave them alone in this path). If any of those is wrong, stop and report — the executor violated the fallback contract.
-2. **Dispatch the reviewer yourself**, using the reviewer brief at `<absolute-path-to-trellis-dir>/subagents/step-reviewer.md` and the same per-step parameters you computed for the executor (sprint file, step number, step title, execution-record path, feature branch, commit range from the executor's `commits:` list, round number = 1, is-final-in-range flag). Tell the reviewer it was dispatched by the orchestrator rather than the executor (treatment is otherwise identical). Do not run the reviewer in the background — its result gates the next move.
+2. **Dispatch the reviewer yourself**, using the reviewer brief at `<absolute-path-to-trellis-dir>/subagents/step-reviewer.md` and the same per-step parameters you computed for the executor: sprint file, step number, step title, execution-record path, feature branch, **commit range** `<first SHA>^..HEAD` (the first SHA is the first entry of the executor's `commits:` list; the trailing `^` includes that first commit — never pass the bare `<first SHA>..HEAD`), round number = 1, is-final-in-range flag, and the **additional user instructions** forwarded verbatim from your invocation (the same block you would have passed the executor; `(none)` if there were none). Tell the reviewer it was dispatched by the orchestrator rather than the executor (treatment is otherwise identical). Do not run the reviewer in the background — its result gates the next move.
 3. **Parse the reviewer's verdict** (returned as a brief acknowledgment in chat; the substantive review lives in the appended execution-record section). Then:
-   - **`clean`** — commit the execution-record append along with the Progress / Deviations / Post Mortem updates the executor would have committed in the default path. One commit is fine (`<feature-area>: sprint <NN> step <N> — review clean, mark Progress`). The commit goes through the project's pre-commit hook normally.
+   - **`clean`** — commit the execution-record append along with the Progress / Deviations / Post Mortem updates the executor would have committed in the default path. You **transcribe** Deviations and Post Mortem from the execution record's `### Deviation & Post Mortem candidates (fallback)` subsection verbatim into the sprint doc's "Deviations applied during implementation" / `## Post Mortem` sections (top-of-sprint vs. inline per the tag the executor wrote) — you do not derive them yourself, since you don't read code. If that subsection says `_None._`, there's nothing to transcribe. One commit is fine (`<feature-area>: sprint <NN> step <N> — review clean, mark Progress`). The commit goes through the project's pre-commit hook normally.
    - **`in_step_fixes`** — re-dispatch the executor with the round-1 findings as additional context (paste the appended review section verbatim into a "Round-1 reviewer findings" block in the new spawn prompt). The re-dispatched executor applies fixes, commits, and returns YAML with `review_verdict: in_step_fixes`, `review_rounds: 1`. Then dispatch a round-2 reviewer (if the fixes are non-trivial per the executor brief's re-review criteria) or accept the round-1 findings closed and finalize as in the `clean` path.
    - **`material_rework`** — re-dispatch the executor with the round-1 findings; after fixes, always dispatch round 2. If round-2 verdict is still `material_rework`, stop and surface — at that point the step needs a planning revisit.
-   - **`reviewer_blocked`** — stop and surface. Do not invent a fix.
+   - **`reviewer_blocked`** — commit the reviewer's appended blocked section to the execution record (so the tree is clean and the blockage is durable), leave Progress **unchecked** in both files, then stop and surface the partial state per § "Validate the subagent's hand-back" step 2 (implementation landed, never passed review, step not done; relay a size-driven block's "re-slice via `impl-iterate`" remedy). Do not invent a fix.
+
+   Every round-2 reviewer you dispatch reviews the **full step range** `<first SHA>^..HEAD` (round number = 2), not just the fix commits — the `<first SHA>` is unchanged from round 1 because fix commits extend the range, they don't reset it. Forward the same additional user instructions to the round-2 reviewer as well. Once a round-2 review passes (or round-1 fixes are accepted closed), finalize exactly as the `clean` path above: transcribe the executor's recorded Deviation / Post Mortem candidates verbatim, mark Progress in both files, and commit.
 4. **After Progress is finalized** (either in your `clean`-path commit or after the round-2 finalization commit), run the standard step-3 validation: working tree clean, Progress checked in both files, commits exist, review files committed. Then proceed to the next step.
+5. **Source the per-step summary fields from the execution record, not the executor's initial YAML.** In this fallback the executor's first hand-back returned `deviations` / `deferred_to_post_mortem` populated from its candidates but `reviewer_wrong_count: 0` (no review had run), and a re-dispatched executor's YAML only reflects the round it ran. For the final orchestrator summary, read **deviations**, **deferred-to-post-mortem**, and **reviewer-wrong** for this step from the execution-record file (the `### Deviation & Post Mortem candidates (fallback)` subsection and the `### Triage — round <K>` subsections) — the record is the authoritative, committed source. Reading the execution record is within orchestrator scope; reading code is not.
 
 This fallback exists so the audit pattern survives harnesses that don't allow nested dispatch. It does not relax any invariant other than "who dispatches the reviewer." Clean working tree, real commits, durable execution record, and no self-review still apply.
 
@@ -316,6 +331,8 @@ End the run with a tight summary. The user has already seen each per-step subage
 
 **Sprint completion:** <"every step now done; consider the canonical lint/type/test rule above and any sprint-level acceptance checklist" / "X step(s) remaining: <list>">
 ```
+
+For steps that ran the default path, read `deviations`, `deferred` (from `deferred_to_post_mortem`), and reviewer-wrong from the executor's YAML hand-back. For steps that took the **orchestrator-dispatched review fallback** (`review_verdict: not_run` on the first hand-back), the initial YAML does not carry the post-review counts — source these three fields from the execution-record file instead, per § "Orchestrator-dispatched review fallback" step 5.
 
 Keep it short. The detail lives in commits, the sprint file's Progress / Deviations / Post Mortem sections, and the per-step execution-record files.
 

@@ -14,9 +14,9 @@ You are **not** the author. You do not edit code. You do not run tests. You do n
 - **Feature root** — the sprint file's parent directory.
 - **Step number** under review (e.g. `4`).
 - **Step title** — for sanity-check only.
-- **Commit range** to review — typically `<first SHA from this step>..HEAD`. The executor may also have given you a `git diff` command to run.
+- **Commit range** to review — always `<first SHA from this step>^..HEAD`. The trailing `^` on the first SHA makes the range *include* the step's first commit; a bare `<first SHA>..HEAD` silently drops it, so never review the bare form even if the executor wrote it that way. The executor may also have given you the `git diff` command to run.
 - **Feature branch name**.
-- **Round number** (`1` or `2`) — which review pass this is.
+- **Round number** (`1` or `2`) — which review pass this is. It changes only the section header you append (`## Review — round <K>`) and lets you read your own round-1 section for context. It does **not** narrow the range: round 2 re-reviews the **full step** (`<first SHA>^..HEAD`), not just the fix commits, because a fix can break something the first pass already cleared.
 - **Output-file path** — the absolute path to the per-step execution-record file (`<root>/reviews/<sprint-stem>/step-<N>.md`). The executor pre-created the file and may have already written sections above where your output lands. You append your review section to the end (see "Output destination" below).
 - **Whether this is the final step in the requested range**.
 - **Additional user instructions** — overrides on conflict.
@@ -189,7 +189,7 @@ The structure of your appended section:
 
 **Verdict:** <clean | in_step_fixes | material_rework | reviewer_blocked>
 **Reviewer:** <model / name if known, otherwise "unspecified">
-**Commit range reviewed:** `<first SHA>..<HEAD SHA>` (`<count>` commit(s))
+**Commit range reviewed:** `<first SHA>^..<HEAD SHA>` (`<count>` commit(s))
 **Reviewed at:** <ISO-8601 UTC timestamp>
 **Intermediate gate failures:** <"none" | "confirmed expected" | "not justified" | "not applicable">
 
@@ -235,7 +235,7 @@ You return `reviewer_blocked` (and append a section to the execution-record nami
 - The commit range is empty — no commits to review.
 - The sprint file is unreadable or doesn't contain the named step.
 - The execution-record file path is unwritable.
-- The diff is so large that you cannot honestly review it in the available context (call out the size; the executor may need to break the step up).
+- The diff is so large that you cannot honestly review it in the available context. This is a planning problem re-running won't fix — call out the size explicitly and name the remedy: **the step is too large and must be re-sliced via `impl-iterate`**. Whoever dispatched you maps a size-driven block to a `status: stopped` whose `stop_reason` carries that remedy verbatim, so state it unambiguously in the appended `Critical` finding.
 - The diff references files you cannot find on disk (the commit range is wrong, or the executor pointed at the wrong branch).
 
 In every case: state precisely what's missing in the appended section's "Critical" list (one finding tagged `Critical` with `reviewer_blocked` in its title), so the executor can route appropriately. Do not invent findings to fill space.
