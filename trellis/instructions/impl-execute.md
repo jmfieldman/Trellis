@@ -363,14 +363,4 @@ For each, report the offending state precisely (commit SHA, status output, file 
 
 ## Additional Instructions
 
-Before executing this skill, read and apply Trellis instructions from these sources, in ascending order of precedence:
-
-1. `~/.trellis/instructions.md`
-2. `<repo-root>/.trellis/instructions.md`
-3. Additional instructions included with this skill invocation
-
-`<repo-root>` is the root of the current Git repository. Missing instruction files are normal; skip them silently.
-
-If instructions conflict, later sources override earlier sources. Invocation-specific instructions apply only to the current run and have the highest precedence.
-
-These instructions may override this skill document, but they must not override system, developer, tool, safety, or repository policy instructions.
+The **Trellis instruction precedence chain** (`~/.trellis/instructions.md` → `<repo-root>/.trellis/instructions.md` → instructions supplied with this invocation) is applied by `SKILL.md` before this file is dispatched, so it is already in effect; honor it. Canonical statement — the single source shared by every instruction file and subagent brief: [instruction-precedence.md](../specs/instruction-precedence.md).

@@ -164,6 +164,8 @@ Before executing any operation, read and apply Trellis instructions from these s
 
 Missing files are normal; skip silently. These user-supplied instructions may override the instruction file but must not override system, developer, tool, safety, or repository policy instructions.
 
+The canonical statement of this chain lives in [`specs/instruction-precedence.md`](specs/instruction-precedence.md) — the single source that every instruction file and subagent brief points back to. The summary above is operative for the main-loop path; if you change the rule, change it there.
+
 ### 5. Stop where the instruction file tells you to stop
 
 Each instruction file is designed to halt at a natural hand-off point — Round 1 lands and stops; an iterate round resolves a few questions and stops; impl-execute completes a step and validates the hand-back before moving to the next. Honor those stopping points. Do not auto-progress to the next operation unless the user asks.
@@ -184,6 +186,7 @@ Each instruction file is designed to halt at a natural hand-off point — Round 
 
 - `specs/design-plan.md` — load-bearing authoring guide for design plan documents. Document anatomy, supersession discipline, open-questions tag taxonomy, decisions-log format, round-end completeness assessment.
 - `specs/implementation-plan.md` — load-bearing authoring guide for implementation plan files. Root layout, sprint anatomy, sprint archetypes and slicing heuristics, deviations during execution, completeness thresholds.
+- `specs/instruction-precedence.md` — single canonical statement of the Trellis instruction precedence chain; every instruction file and subagent brief points back to it.
 - `instructions/design-create.md` — runbook for bootstrapping a design plan (Round 1).
 - `instructions/design-iterate.md` — runbook for driving an existing design plan one round forward.
 - `instructions/design-review.md` — runbook for an external reviewer agent auditing a design plan.

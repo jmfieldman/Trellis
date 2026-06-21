@@ -195,8 +195,9 @@ The skill is manually invoked (`disable-model-invocation: true`) — the model n
 trellis/
 ├── SKILL.md                    top-level skill — workflow overview + dispatch
 ├── specs/
-│   ├── design-plan.md          design plan authoring guide
-│   └── implementation-plan.md  implementation plan authoring guide
+│   ├── design-plan.md             design plan authoring guide
+│   ├── implementation-plan.md     implementation plan authoring guide
+│   └── instruction-precedence.md  canonical instruction-precedence chain
 ├── subagents/
 │   ├── step-executor.md        per-step executor subagent brief
 │   ├── step-reviewer.md        per-step reviewer subagent brief

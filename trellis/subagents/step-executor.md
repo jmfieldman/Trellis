@@ -12,17 +12,7 @@ You also have access to project-level context — the project's conventions doc 
 
 ## Additional Instructions
 
-Before executing this step, read and apply Trellis instructions from these sources, in ascending order of precedence:
-
-1. `~/.trellis/instructions.md`
-2. `<repo-root>/.trellis/instructions.md`
-3. Additional user instructions passed by the orchestrator
-
-`<repo-root>` is the root of the current Git repository. Missing instruction files are normal; skip them silently.
-
-If instructions conflict, later sources override earlier sources. Invocation-specific instructions apply only to the current run and have the highest precedence.
-
-These instructions may override this brief, but they must not override system, developer, tool, safety, or repository policy instructions.
+Read and apply the **Trellis instruction precedence chain** before executing this step — read [instruction-precedence.md](../specs/instruction-precedence.md) and follow it. Sources, lowest to highest precedence: `~/.trellis/instructions.md`, `<repo-root>/.trellis/instructions.md`, then additional user instructions passed by the orchestrator. These may override this brief, but never system, developer, tool, safety, or repository policy instructions.
 
 ---
 
