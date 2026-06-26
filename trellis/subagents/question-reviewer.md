@@ -13,7 +13,7 @@ The resolver can be confident-but-wrong. The single most valuable thing you do i
 - **File path** — the Trellis file the question lives in (`design.md`, `overview.md`, or a sprint file `NN-*.md`).
 - **Feature root** — the file's parent directory.
 - **Doc type** — `design` (the file is `design.md`) or `impl` (`overview.md` or a sprint file).
-- **The question** — its number, full text, and severity tag (`[blocks-v1]` / `[blocks-impl]` / `[deferred]` / `[exploratory]`).
+- **The question** — its number, full text, and severity tag (`[blocks-v1]` / `[blocks-impl]` / `[deferred]` / `[exploratory]`), or `[untagged]` when the source entry has no severity.
 - **The proposed resolution** — the resolver's verdict (`recommend` / `escalate-as-is` / `route-to-design`), its recommended option, the alternatives it weighed, its stated basis, and its confidence.
 - **Sibling questions** — the other Open Questions being resolved in the same run, so you can spot when this proposal collides with a parallel one.
 - **Design plan path** — the source-of-truth design plan (`<root>/design.md`).

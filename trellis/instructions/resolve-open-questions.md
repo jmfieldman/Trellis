@@ -35,7 +35,7 @@ Pass each subagent the absolute path to its brief plus the per-question paramete
 Extract from the user's natural-language invocation:
 
 - **`<file-path>`** (required) — an absolute or repo-relative path to a single Trellis file with an Open Questions section: `design.md`, `overview.md`, or a sprint file `NN-<topic>.md`. The feature root `<root>` is the file's parent directory.
-- **Scope override** (optional, free text) — by default this skill resolves only **blocking** questions (`[blocks-v1]` and `[blocks-impl]`). If the user says "all questions" / "include deferred and exploratory," widen to every Open Question.
+- **Scope override** (optional, free text) — by default this skill resolves **blocking** questions (`[blocks-v1]` and `[blocks-impl]`) plus any **untagged** Open questions. Untagged questions are a process bug, but they are included without prompting unless the user explicitly excludes them. If the user says "all questions" / "include deferred and exploratory," widen to every Open Question.
 - **Step-decomposition instruction** (optional, free text) — by default the skill **stops at integration**. Only if the user explicitly asks ("then write the steps," "lock the sprint after," "decompose into steps") *and* the file is a sprint file does the skill continue into step decomposition. See "Optional: step decomposition" at the end.
 - **Focus / other inline instructions** (optional) — forwarded verbatim to every resolver as overrides.
 
@@ -60,13 +60,13 @@ Through question extraction and dispatch, the orchestrator reads only the **one 
 
 ### 1. Extract and filter the questions
 
-From the target file's Open Questions section, enumerate every entry: its number, full text, and severity tag. Then filter:
+From the target file's Open Questions section, enumerate every entry: its number, full text, and severity tag. If an entry has no severity tag, mark its dispatch/report tag as `[untagged]` and keep the original question text unchanged. Then filter:
 
-- **Default:** keep `[blocks-v1]` and `[blocks-impl]`. Skip `[deferred]` and `[exploratory]` — those are deliberately punted; resolving a deferred question contradicts the punt. Note in the final report how many you skipped and that the user can re-invoke with "all questions" to include them.
+- **Default:** keep `[blocks-v1]`, `[blocks-impl]`, and `[untagged]`. Skip `[deferred]` and `[exploratory]` — those are deliberately punted; resolving a deferred question contradicts the punt. Note in the final report how many you skipped and that the user can re-invoke with "all questions" to include them.
 - **Scope override:** keep all questions.
-- **Untagged questions** are a process bug per the authoring guides (every Open question should carry exactly one severity tag). Don't silently promote them to blocking — surface them to the user before dispatch, note the missing tag, and ask whether to include each. Dispatch a resolver for an untagged question only with the user's explicit say-so.
+- **Untagged questions:** include them by default and pass them to resolver/reviewer prompts with tag `[untagged]`. Do **not** stop to ask whether they should be included. Do **not** silently promote them to `[blocks-v1]` or `[blocks-impl]`; keep them visibly `[untagged]` in the presentation/report and, if they remain open after integration, call out that the plan still has a tagging hygiene bug. If the user explicitly says to skip untagged questions, skip them.
 
-If nothing survives the filter, report "no blocking Open questions in `<file>`; re-invoke with 'all questions' to include `[deferred]` / `[exploratory]`" and stop.
+If nothing survives the filter, report "no blocking or untagged Open questions in `<file>`; re-invoke with 'all questions' to include `[deferred]` / `[exploratory]`" and stop.
 
 ### 2. Schedule the dispatch (parallel by default)
 
@@ -91,8 +91,8 @@ Parameters:
 - File path: <absolute file path>
 - Feature root: <absolute root>
 - Doc type: <design | impl>
-- The question: <number + full verbatim text + severity tag>
-- Sibling questions in this run: <numbered list of the other in-scope questions, text + tag>
+- The question: <number + full verbatim text + severity tag, or [untagged] when missing in source>
+- Sibling questions in this run: <numbered list of the other in-scope questions, text + tag; use [untagged] when missing in source>
 - Upstream decided answers (if this resolver was serialized after a dependency): <question N → decided option, or "(none)">
 - Design plan path: <root>/design.md
 - Reviewer brief (you will spawn the reviewer yourself): <absolute-path-to-trellis-dir>/subagents/question-reviewer.md
@@ -199,7 +199,7 @@ Emit a terse summary:
 ### resolve-open-questions — summary
 
 **File:** `<basename>` (<doc type>)  ·  **Round:** <n>
-**In scope:** <k> question(s) (<skipped> deferred/exploratory skipped)
+**In scope:** <k> question(s) (<u> untagged included; <skipped> deferred/exploratory skipped)
 
 **Resolved & integrated:**
 - Q<n> → <chosen option> — <one line> — logged in `<decisions.md | sprint file | design.md>`
@@ -221,12 +221,13 @@ Emit the standard round-end completeness assessment to chat — but only when th
 
 - **`design` file** — use the design-plan block ([design-plan.md § "Round-end completeness assessment"](../specs/design-plan.md)): `Verdict` + `Open-question tag counts`. Design plans have **no** `Threshold graded` field — do not invent one. Apply the literal completeness test: any `[blocks-v1]` / `[blocks-impl]` question still open (including an `escalate-as-is` you left for the user or a `route-to-design`) forces `not-yet-complete`.
 - **`impl` file** — use the implementation-plan block ([implementation-plan.md § "Round-end completeness assessment"](../specs/implementation-plan.md)), which **does** carry a `Threshold graded` field: name `sprint-NN-execution-ready` for a sprint file, `plan-complete` for `overview.md`. Resolving questions rarely reaches `complete` on its own; grade honestly against what remains open after this run.
+- **Untagged leftovers** — if any `[untagged]` question remains open after integration, count it separately in the assessment (`untagged: <n>`), call it a tagging hygiene bug, and force `not-yet-complete` / not execution-ready until it is resolved or explicitly re-tagged. Do not stop earlier to ask whether to process it.
 
 ---
 
 ## Optional: step decomposition
 
-Only when **all** of these hold: the user explicitly asked for it in their invocation; the target file is a **sprint file**; and — checked **after** integration and **after** appending any newly-surfaced sub-questions (the sub-question append in step 7) — the sprint file has **zero** `[blocks-impl]` / `[blocks-v1]` Open questions left. A question you left open this run (an unpicked `escalate-as-is`, a `route-to-design`) or a blocking sub-question a resolution just spun off is itself a blocker that **aborts** decomposition.
+Only when **all** of these hold: the user explicitly asked for it in their invocation; the target file is a **sprint file**; and — checked **after** integration and **after** appending any newly-surfaced sub-questions (the sub-question append in step 7) — the sprint file has **zero** `[blocks-impl]` / `[blocks-v1]` / `[untagged]` Open questions left. A question you left open this run (an unpicked `escalate-as-is`, a `route-to-design`, an unresolved `[untagged]` entry) or a blocking sub-question a resolution just spun off is itself a blocker that **aborts** decomposition.
 
 When the gate passes, decomposition runs **inside the same single round** as the integration — it does not open a second round. Concretely: do **not** append a second Status entry, and let the step-9 completeness assessment grade against `sprint-NN-execution-ready` (instead of the resolve-only grading). Follow [`impl-iterate.md`](./impl-iterate.md) § "Aggressive locking" (Step 2) and its Step 4–8 mechanics to populate the Locked Decisions table, Architecture notes, Public surface (when applicable), Implementation Steps with concrete Verification, the Step Dependency Chart, and the Acceptance checklist — then regenerate this sprint's section in `progress.md` and keep it in lockstep with the per-sprint Progress checklist. (This is the one case where the run touches `progress.md`.)
 

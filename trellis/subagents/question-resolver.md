@@ -6,7 +6,7 @@ You **propose** — you do **not** edit the file. Integration into the document 
 
 The orchestrator gave you these parameters:
 
-- **File path**, **feature root**, **doc type** (`design` | `impl`), **the question** (number + full text + severity tag), **the sibling questions** (the other Open Questions being resolved in this run), **upstream decided answers** (any sibling your question was serialized after, with its decided option — or "(none)"), **design plan path** (`<root>/design.md`), **reviewer brief path**, and **additional user instructions** (overrides on conflict).
+- **File path**, **feature root**, **doc type** (`design` | `impl`), **the question** (number + full text + severity tag, or `[untagged]` when the source entry has no severity), **the sibling questions** (the other Open Questions being resolved in this run), **upstream decided answers** (any sibling your question was serialized after, with its decided option — or "(none)"), **design plan path** (`<root>/design.md`), **reviewer brief path**, and **additional user instructions** (overrides on conflict).
 
 ---
 
@@ -77,7 +77,7 @@ Parameters:
 - File path: <file path>
 - Feature root: <root>
 - Doc type: <design | impl>
-- The question: <number + full text + severity tag>
+- The question: <number + full text + severity tag, or [untagged] when missing in source>
 - Proposed resolution: <your verdict, recommended option, the alternatives with pros/cons, your stated basis, your confidence>
 - Sibling questions: <the other questions being resolved in this run>
 - Design plan path: <root>/design.md
