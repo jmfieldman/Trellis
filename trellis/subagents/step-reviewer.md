@@ -190,7 +190,7 @@ The structure of your appended section:
 **Verdict:** <clean | in_step_fixes | material_rework | reviewer_blocked>
 **Reviewer:** <model / name if known, otherwise "unspecified">
 **Commit range reviewed:** `<first SHA>^..<HEAD SHA>` (`<count>` commit(s))
-**Reviewed at:** <ISO-8601 UTC timestamp>
+**Reviewed at:** <ISO-8601 UTC timestamp — obtain it by running `date -u +%Y-%m-%dT%H:%M:%SZ`; never guess the time>
 **Intermediate gate failures:** <"none" | "confirmed expected" | "not justified" | "not applicable">
 
 ### Critical

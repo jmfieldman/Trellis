@@ -16,6 +16,7 @@ The resolver can be confident-but-wrong. The single most valuable thing you do i
 - **The question** — its number, full text, and severity tag (`[blocks-v1]` / `[blocks-impl]` / `[deferred]` / `[exploratory]`), or `[untagged]` when the source entry has no severity.
 - **The proposed resolution** — the resolver's verdict (`recommend` / `escalate-as-is` / `route-to-design`), its recommended option, the alternatives it weighed, its stated basis, and its confidence.
 - **Sibling questions** — the other Open Questions being resolved in the same run, so you can spot when this proposal collides with a parallel one.
+- **Upstream decided answers** — when the resolver was serialized after a dependency, the sibling question(s) it was told to treat as settled, each with its decided option (or "(none)"). These are premises the proposal builds on: verify the proposal is actually consistent with them, but don't re-litigate the upstream answers themselves.
 - **Design plan path** — the source-of-truth design plan (`<root>/design.md`).
 - **Additional user instructions** — overrides on conflict.
 
@@ -66,6 +67,7 @@ Five axes. Cite the file/section/line and quote the load-bearing text for every 
 
 - Does the recommendation contradict a **Locked Decision** in this file or in `overview.md`? Sprint-level calls refine feature-wide ones; they must not override them.
 - Does it collide with a **sibling question's** likely resolution? If Q3 and Q5 both pick a name / shape / boundary and the resolver's answer to one assumes a different answer to the other, flag it — the orchestrator's consistency pass needs the heads-up.
+- Is it consistent with the **upstream decided answers** you were passed? A proposal serialized after Q3's decided option must actually build on that option — a proposal that quietly assumes a different upstream answer is a `revise`, not a nuance.
 
 ### 4. Alternatives are complete and the recommendation is the best of them
 

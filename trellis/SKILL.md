@@ -29,6 +29,10 @@ A typical feature root layout:
 ├── decisions.md
 ├── status.md
 ├── progress.md
+├── post-mortem.md            # created lazily when the first sprint ships
+├── design-review-R<N>.md     # review artifacts (design-review / impl-review outputs);
+├── impl-review-R<N>.md       #   working records, not plan files
+├── reviews/                  # per-step execution records, created during impl-execute
 └── 01-<topic>.md … NN-<topic>.md
 ```
 
@@ -108,7 +112,7 @@ Map the user's request to one of ten operations — nine layer-specific ones plu
 | "Iterate the impl plan / lock Sprint 03 / flesh out the next sprint"  | impl-iterate               | `instructions/impl-iterate.md`             |
 | "Review the implementation plan"                                      | impl-review                | `instructions/impl-review.md`              |
 | "Incorporate this impl-plan review"                                   | impl-integrate-feedback    | `instructions/impl-integrate-feedback.md`  |
-| "Execute Sprint NN step M (through P) / ship this sprint"             | impl-execute               | `instructions/impl-execute.md`             |
+| "Execute Sprint NN step M (through P) / execute the rest of the sprint / ship this sprint" | impl-execute | `instructions/impl-execute.md`             |
 | "Resolve the open questions in `<file>` / answer the open questions for Sprint 03 / draft answers to this file's open questions" | resolve-open-questions | `instructions/resolve-open-questions.md`   |
 
 If the user's wording is ambiguous between two operations (e.g., "work on the implementation plan" could be iterate, review, or execute), ask which one before reading anything else. The closest pair to disambiguate is `*-iterate` vs. `resolve-open-questions`: an iterate round is **you** framing 1–5 questions and the user deciding each live; `resolve-open-questions` **fans out a subagent per question** to investigate and propose answers, which the user then approves or tunes in a batch. When the user says "answer / resolve / draft answers to the open questions in `<one file>`," that's `resolve-open-questions`; when they say "drive the plan forward" or "let's work through Q3 together," that's iterate.
@@ -121,19 +125,19 @@ Path conventions (apply across every operation):
 
 - **The design plan is always `<root>/design.md`.** The user names only the feature root `<root>`; the agent appends `design.md`.
 - **Implementation plan files live directly in `<root>`.** For impl operations the user names the same feature root.
-- **Tolerance.** If the user types a path ending in `design.md`, `overview.md`, `progress.md`, `decisions.md`, `status.md`, or a sprint file like `03-foo.md`, treat its parent as `<root>`. Don't re-prompt for paths whose meaning is unambiguous.
+- **Tolerance.** If the user types a path ending in `design.md`, `overview.md`, `progress.md`, `decisions.md`, `status.md`, a sprint file like `03-foo.md`, or a review artifact like `impl-review-R5.md`, treat its parent as `<root>`. Don't re-prompt for paths whose meaning is unambiguous.
 
 Per-operation inputs:
 
 - **design-create** needs `<root>` — the directory in which to create `design.md`. Create the directory if it doesn't exist.
 - **design-iterate** needs `<root>` — reads and rewrites `<root>/design.md`.
-- **design-review** needs `<root>` and `<review-output-path>`. Reads `<root>/design.md`.
+- **design-review** needs `<root>`; `<review-output-path>` is optional (defaults to `<root>/design-review-R<N>.md`). Dispatches a fresh-context reviewer subagent against `<root>/design.md`.
 - **design-integrate-feedback** needs `<root>` and `<feedback-path>`. Reads and rewrites `<root>/design.md`.
 - **impl-create** needs `<root>` — reads `<root>/design.md` and creates implementation files directly in `<root>`.
 - **impl-iterate** needs `<root>` — operates on the implementation files directly in `<root>`.
-- **impl-review** needs `<root>` and `<review-output-path>` — reviews the implementation files directly in `<root>`.
+- **impl-review** needs `<root>`; `<review-output-path>` is optional (defaults to `<root>/impl-review-R<N>.md`). Dispatches a fresh-context reviewer subagent against the implementation files directly in `<root>`.
 - **impl-integrate-feedback** needs `<root>` and `<feedback-path>` — edits the implementation files directly in `<root>`.
-- **impl-execute** needs `<sprint-path>`, `<from-step>`, and optionally `<to-step>`. The sprint path implies its parent as `<root>`.
+- **impl-execute** needs `<sprint-path>`; `<from-step>` and `<to-step>` are optional. With neither ("execute the sprint" / "execute the rest of Sprint 03"), the range defaults to the remaining unchecked steps; with only `<from-step>`, a single step. The sprint path implies its parent as `<root>`.
 - **resolve-open-questions** needs `<trellis-file-path>` — a single file with an Open Questions section (`design.md`, `overview.md`, or a sprint file `NN-*.md`). Its parent is `<root>`. By default it includes blocking questions (`[blocks-v1]` / `[blocks-impl]`) **plus any untagged Open questions**; untagged questions are a process bug, but they stay in scope unless the user explicitly excludes them. Optional inline instructions: "all questions" (also include `[deferred]` / `[exploratory]`) and "then write the steps" (decompose into steps after integrating — sprint files only). It operates on **one file per invocation**; never accept "resolve all open questions across the plan."
 
 Inside the relevant instruction file, paths are referenced by their semantic names (`<root>`, `<review-output-path>`, etc.). Substitute the values you extracted from the user's natural-language invocation wherever those placeholders appear.
@@ -142,17 +146,22 @@ If a path the operation needs is missing or unclear, ask for it before proceedin
 
 ### 3. Lazy-load the relevant context — only what's needed
 
-This skill bundles a lot of material. **Do not read everything up front.** Load files in this order, only as the operation requires:
+This skill bundles a lot of material. **Do not read everything up front.** Load files per this map, only as the operation requires:
 
 1. **Always:** the matching instruction file in `instructions/`. That's the runbook for what the operation does and the quality bar it has to hit.
-2. **When working with a design plan** (design-create, design-iterate, design-review, design-integrate-feedback, or when impl-create / impl-review need to consume one): `specs/design-plan.md` is the authoring guide. Load it before producing or auditing design-plan content.
-3. **When working with an implementation plan** (impl-create, impl-iterate, impl-review, impl-integrate-feedback, impl-execute): `specs/implementation-plan.md` is the authoring guide. Load it before producing or auditing implementation-plan content.
-4. **Only for impl-execute:** the orchestrator instruction file at `instructions/impl-execute.md` directs spawning subagents whose briefs live at `subagents/step-executor.md` and `subagents/step-reviewer.md`. The orchestrator passes the brief paths to the subagents; the orchestrator itself does not need to read those briefs end-to-end, but should know they exist.
-5. **Only for resolve-open-questions:** the orchestrator at `instructions/resolve-open-questions.md` spawns subagents whose briefs live at `subagents/question-resolver.md` and `subagents/question-reviewer.md` (the resolver spawns the reviewer). The orchestrator passes the brief paths; it does not read them end-to-end. At *integration* time it loads the spec matching the target file's doc type — `specs/design-plan.md` for `design.md`, `specs/implementation-plan.md` for `overview.md` / a sprint file — to apply standard round mechanics (move to Decisions log, append one Status entry, completeness assessment).
+2. **Design-plan work** (design-create, design-iterate, design-integrate-feedback, or when impl-create needs to consume a design plan): `specs/design-plan.md` is the authoring guide. Load it before producing or auditing design-plan content.
+3. **Implementation-plan work** — the impl spec is split in three; load only the parts the operation needs:
+   - `specs/implementation-plan.md` — anatomy + authoring conventions. Load for impl-create, impl-iterate, impl-integrate-feedback, and resolve-open-questions integration on an impl file.
+   - `specs/implementation-plan-mechanics.md` — round mechanics, completeness assessment, multi-file edit discipline, cross-sprint coherence + around-corner checklists. Load for impl-iterate, impl-integrate-feedback, and resolve-open-questions integration on an impl file; impl-create needs only its "Round 1" and "Round-end completeness assessment" sections.
+   - `specs/implementation-plan-templates.md` — skeleton templates. Load for impl-create; for impl-iterate only when the round creates a new sprint file.
+4. **Feedback integration** (design-integrate-feedback, impl-integrate-feedback): `specs/review-and-triage.md` **Part II** is the shared triage machinery — load it alongside the layer's spec files above (Part I is for reviewers; skip it).
+5. **Reviews** (design-review, impl-review): the orchestrator loads almost nothing — it dispatches a subagent whose brief lives at `subagents/design-plan-reviewer.md` / `subagents/impl-plan-reviewer.md`. Pass the brief path; do not read the brief end-to-end. The subagent itself loads `specs/review-and-triage.md` Part I plus the layer's spec files.
+6. **Only for impl-execute:** the orchestrator instruction file at `instructions/impl-execute.md` directs spawning subagents whose briefs live at `subagents/step-executor.md` and `subagents/step-reviewer.md`. The orchestrator passes the brief paths and needs no spec files at all; the subagents load what their briefs name.
+7. **Only for resolve-open-questions:** the orchestrator at `instructions/resolve-open-questions.md` spawns subagents whose briefs live at `subagents/question-resolver.md` and `subagents/question-reviewer.md` (the resolver spawns the reviewer). The orchestrator passes the brief paths; it does not read them end-to-end. At *integration* time it loads the spec matching the target file's doc type — `specs/design-plan.md` for `design.md`; `specs/implementation-plan.md` + `specs/implementation-plan-mechanics.md` for `overview.md` / a sprint file — to apply standard round mechanics (move to Decisions log, append one Status entry, completeness assessment).
 
-**Do not** load `specs/design-plan.md` if the user is purely working on implementation-plan material that doesn't reference the design plan. **Do not** load `specs/implementation-plan.md` for a design-only round. **Do not** read subagent briefs unless you're running impl-execute. Each spec is large; loading both for every interaction wastes context.
+**Do not** load `specs/design-plan.md` if the user is purely working on implementation-plan material that doesn't reference the design plan. **Do not** load the implementation-plan spec files for a design-only round. **Do not** read subagent briefs in the main loop — pass their paths. Each spec is large; loading more than the operation needs wastes context.
 
-When in doubt, prefer reading less. The instruction file will tell you which spec it depends on.
+When in doubt, prefer reading less. The instruction file will tell you which spec sections it depends on.
 
 ### 4. Apply the trellis instruction precedence chain
 
@@ -168,7 +177,19 @@ The canonical statement of this chain lives in [`specs/instruction-precedence.md
 
 ### 5. Stop where the instruction file tells you to stop
 
-Each instruction file is designed to halt at a natural hand-off point — Round 1 lands and stops; an iterate round resolves a few questions and stops; impl-execute completes a step and validates the hand-back before moving to the next. Honor those stopping points. Do not auto-progress to the next operation unless the user asks.
+Each instruction file is designed to halt at a natural hand-off point — Round 1 lands and stops; an iterate round resolves a few questions and stops; impl-execute completes a step and validates the hand-back before moving to the next. Honor those stopping points. Do not auto-progress to the next operation unless the user asks — and when they do ask, only the sanctioned chains below have defined mechanics.
+
+### 6. Sanctioned operation chains
+
+Three chains have defined mechanics. When the user's invocation explicitly asks for one, run both halves in the same invocation; never chain beyond what was asked, and never chain on your own initiative:
+
+| Chain                                            | Typical trigger                                                       | Mechanics |
+| ------------------------------------------------ | --------------------------------------------------------------------- | --------- |
+| design-review → design-integrate-feedback        | "review the design plan **and integrate** the findings"               | Run design-review (dispatching the reviewer subagent); when the review file lands, load `instructions/design-integrate-feedback.md` and run it with `<feedback-path>` = that review. All integrate gates still apply — a >20% Reviewer-wrong rate stops the chain there. |
+| impl-review → impl-integrate-feedback            | "review the impl plan **and integrate** the findings"                 | Same shape, implementation-plan files. |
+| resolve-open-questions → step decomposition      | "resolve the open questions in `<sprint file>` **then write the steps**" | Defined in `instructions/resolve-open-questions.md` § "Optional: step decomposition" — sprint files only, gated on zero blocking questions after integration. |
+
+The review → integrate chains preserve the fresh-context audit because the review is produced by a dispatched subagent, not by the context that integrates it. Nothing chains into impl-execute, and create operations never chain into iterate rounds.
 
 ---
 
@@ -185,16 +206,19 @@ Each instruction file is designed to halt at a natural hand-off point — Round 
 ## What lives where
 
 - `specs/design-plan.md` — load-bearing authoring guide for design plan documents. Document anatomy, supersession discipline, open-questions tag taxonomy, decisions-log format, round-end completeness assessment.
-- `specs/implementation-plan.md` — load-bearing authoring guide for implementation plan files. Root layout, sprint anatomy, sprint archetypes and slicing heuristics, deviations during execution, completeness thresholds.
+- `specs/implementation-plan.md` — load-bearing authoring guide for implementation plan files. Root layout, per-file anatomies, sprint archetypes and slicing heuristics, tone, anti-patterns.
+- `specs/implementation-plan-mechanics.md` — implementation-plan round mechanics: iteration model, supersession, deviations during execution, driving a round, completeness thresholds, multi-file edit discipline, cross-sprint coherence checklist, around-corner concern checklist, execution handoff.
+- `specs/implementation-plan-templates.md` — skeleton templates for every implementation-plan file; loaded at scaffold time and when creating a new sprint file mid-plan.
+- `specs/review-and-triage.md` — shared review & triage machinery. Part I (reviewer posture, finding shape, disposition summary) serves the plan-reviewer briefs; Part II (five buckets, verify-before-incorporating, report format) serves the integrate-feedback skills.
 - `specs/instruction-precedence.md` — single canonical statement of the Trellis instruction precedence chain; every instruction file and subagent brief points back to it.
 - `specs/nested-dispatch.md` — single canonical statement of the nested-subagent dispatch discovery & fallback rule; the execute / resolve subagent briefs and orchestrators point back to it.
 - `instructions/design-create.md` — runbook for bootstrapping a design plan (Round 1).
 - `instructions/design-iterate.md` — runbook for driving an existing design plan one round forward.
-- `instructions/design-review.md` — runbook for an external reviewer agent auditing a design plan.
+- `instructions/design-review.md` — orchestrator runbook: dispatches a fresh-context design-plan reviewer subagent; optionally chains into design-integrate-feedback.
 - `instructions/design-integrate-feedback.md` — runbook for triaging a design-plan review back into the plan.
 - `instructions/impl-create.md` — runbook for bootstrapping an implementation plan from a design plan (Round 1).
 - `instructions/impl-iterate.md` — runbook for driving an existing implementation plan one round forward.
-- `instructions/impl-review.md` — runbook for an external reviewer agent auditing an implementation plan.
+- `instructions/impl-review.md` — orchestrator runbook: dispatches a fresh-context impl-plan reviewer subagent; optionally chains into impl-integrate-feedback.
 - `instructions/impl-integrate-feedback.md` — runbook for triaging an impl-plan review back into the plan.
 - `instructions/impl-execute.md` — orchestrator runbook for executing a range of sprint steps.
 - `instructions/resolve-open-questions.md` — orchestrator runbook for the cross-cutting open-questions accelerator (one file at a time): fan out resolver subagents, run a consistency pass, present, let the user approve/tune, then integrate with standard round mechanics.
@@ -202,3 +226,5 @@ Each instruction file is designed to halt at a natural hand-off point — Round 
 - `subagents/step-reviewer.md` — per-step review subagent brief (fresh-context audit of the diff).
 - `subagents/question-resolver.md` — per-question subagent brief (investigates one Open Question, proposes a recommendation or refuses with options, spawns its own reviewer).
 - `subagents/question-reviewer.md` — review-of-resolution subagent brief (fresh-context critic that verifies the resolver's cited evidence).
+- `subagents/design-plan-reviewer.md` — design-plan review subagent brief (fresh-context audit of a design plan; dispatched by design-review).
+- `subagents/impl-plan-reviewer.md` — impl-plan review subagent brief (fresh-context holistic audit of an implementation plan; dispatched by impl-review).

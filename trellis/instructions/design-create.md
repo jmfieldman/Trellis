@@ -97,6 +97,8 @@ Anything to add, remove, or reshape before I draft Round 1?
 
 If the user signals they want to skip this step (`"just draft it"`), proceed — but capture the framing decisions you made unilaterally as `(R1)` entries in the Decisions log so the user can react after they read the file.
 
+**Draft-first mode.** The same skip can be opted into persistently: when a Trellis instruction file (`~/.trellis/instructions.md` / `<repo-root>/.trellis/instructions.md`) says to draft first (e.g., *"always draft first — I'll react to the file"*), skip Step B's wait without being asked per-invocation: proceed to Step C, capture every framing decision you made unilaterally as an `(R1)` Decisions-log entry, and present the Step B framing summary *after* the file lands (in the hand-off) so the user reacts to a concrete draft instead of a proposal. Reshaping a Round 1 file is cheap for an agent; the confirmation round-trip is the expensive part for a user who has already said they prefer momentum. Confirm-first remains the default absent such an instruction.
+
 ### Step C — Draft the Round 1 file
 
 Once framing is agreed, write the file at `<root>/design.md`. Populate the Round 1 sections per the authoring guide, scaled to what's actually known after Step B:
@@ -167,7 +169,7 @@ What's explicitly *not* expected after Round 1:
 - **Don't pre-populate schema, API surface, or lifecycle sections** with assumptions the user didn't sign off on. A Round 1 schema sketch with five tables you invented is worse than no schema sketch — it anchors the design on guesswork.
 - **Don't copy the user's briefing verbatim into the doc.** Translate it into the canonical anatomy. A briefing paragraph that lands as-is in the foundational decisions section signals the agent skipped the structural work.
 - **Don't merge multiple foundational decisions into one bullet.** If the user said "we need X and Y and Z," that's three bullets, three rationales, three potentially-revisable calls. Bundling hides decision-points.
-- **Don't skip Step B.** Writing the file before confirming framing means re-shaping it the moment the user pushes back. The 5-minute confirmation is cheap insurance.
+- **Don't skip Step B** — unless the user opted out (`"just draft it"` inline, or draft-first mode via a Trellis instruction file; see Step B). Writing the file before confirming framing means re-shaping it the moment the user pushes back. The 5-minute confirmation is cheap insurance; skip it only on an explicit opt-in.
 - **Don't write a build spec.** No file paths beyond illustrative; no exact function signatures; no specific module structures. The design plan describes what the system is, not where each line of code lives.
 - **Don't propose a design "pattern" without surfacing alternatives** when the shape has competing reasonable answers. If you recommend a polymorphic-parent table over subclass tables, the rationale must name the rejected alternative; otherwise the call hides behind a choice that wasn't surfaced.
 - **Don't auto-resolve the user's open questions.** Even when you have a strong opinion, surface alternatives in Step B and let the user pick.

@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 Skill prompt for an LLM agent. Activated when the user wants to take a finished (or substantially-resolved) **design plan** and produce the initial scaffolding of an **implementation plan** — i.e., Round 1 of the implementation plan's iteration cycle.
 
-This skill stops at the end of Round 1. Subsequent rounds (fleshing out individual sprints, locking sprint-level decisions, decomposing sprints into steps) follow the round-by-round mechanics in [implementation-plan.md](../specs/implementation-plan.md). After the scaffold lands, hand the conversation back to the user for Round 2.
+This skill stops at the end of Round 1. Subsequent rounds (fleshing out individual sprints, locking sprint-level decisions, decomposing sprints into steps) follow the round-by-round mechanics in [implementation-plan-mechanics.md](../specs/implementation-plan-mechanics.md). After the scaffold lands, hand the conversation back to the user for Round 2.
 
 ---
 
@@ -41,7 +41,7 @@ Before starting, the agent must have:
 
 1. **The design plan.** Read end to end. The agent must know its vocabulary, foundational decisions (numbered if Shape A; prose if Shape B), Scope / Non-Goals, Schema, Lifecycle sections, API surface, Cross-service contracts, Privacy/Auth, Open questions, and Decisions log.
 2. **The output path** for the implementation plan files. Create `<root>` if it doesn't exist.
-3. **The implementation plan specification.** Read [implementation-plan.md](../specs/implementation-plan.md) before producing any files — the document anatomy, file naming, and section ordering rules in that spec are mandatory.
+3. **The implementation plan specification.** Read [implementation-plan.md](../specs/implementation-plan.md) (anatomy + conventions) and [implementation-plan-templates.md](../specs/implementation-plan-templates.md) (the skeletons you'll scaffold from) before producing any files — the document anatomy, file naming, and section ordering rules are mandatory. From [implementation-plan-mechanics.md](../specs/implementation-plan-mechanics.md), read § "How the document set is produced" (the Round 1 subsection) and § "Round-end completeness assessment" (the `scaffold-complete` threshold); the rest of that file serves later rounds.
 4. **Project context.** Skim the project's `CLAUDE.md`, `AGENTS.md` (or equivalent) so the locked decisions in `overview.md` reflect actual project conventions (test framework, schema-edit authorization, migration policy, idempotency keys, logging, etc.). Don't restate the conventions section verbatim — pin the things every sprint will inherit and link to the project doc for the rest.
 5. **(If they exist) one or more analogue implementation plans in the repo or adjacent repos.** Borrowing structure from a precedent is encouraged — naming conventions, locked-decisions tables, sprint-roster format. Cite the analogue in your Round 1 entry in `status.md` so the user can see the lineage.
 
@@ -58,7 +58,7 @@ If any of these are missing, **stop and ask the user** before producing files. D
 ### Step A — Read everything, then sketch slicing
 
 1. Read the design plan end to end.
-2. Read [implementation-plan.md](../specs/implementation-plan.md) end to end. Pay particular attention to the "Architecture is inherited, not prescribed" section — it governs how examples in this skill are interpreted.
+2. Read [implementation-plan.md](../specs/implementation-plan.md) end to end (plus the templates file and the mechanics sections named under "Required inputs" above). Pay particular attention to the "Architecture is inherited, not prescribed" section — it governs how examples in this skill are interpreted.
 3. **Read the project's `CLAUDE.md` and any analogue implementation plans the user pointed to** (or that you find adjacent to the design plan). Extract the project's architecture per the checklist in [implementation-plan.md § "Architecture is inherited, not prescribed"](../specs/implementation-plan.md#architecture-is-inherited-not-prescribed) — layering, directory conventions, test layering, build/spec workflow, observability, known-footgun set. The implementation plan you're about to scaffold inherits this architecture; it is not your job to invent one.
 
 4. **Sketch a sprint roster** privately (in scratch / planning context). Begin from the natural seam-lines the *feature* decomposes along *given this project's architecture*. Adopt whatever sequence the project already implies — typically foundation → logic → capability → integration → async → surface → hardening, but the exact shape is stack-specific. Deviations should be deliberate and called out in `overview.md`'s sprint-order rationale.
@@ -87,6 +87,8 @@ Ask the user: does this slicing match their mental model? Are there sprints they
 **Iterate on the slicing in conversation before writing files.** A bad slicing means re-shaping every file in Round 2; getting it close in Round 1 saves churn.
 
 **Impasse stop condition.** If after a couple of rounds of back-and-forth the user keeps rejecting rosters without converging, stop proposing — do **not** guess at a roster to break the deadlock. A wrong roster scaffolded to "make progress" costs more to unwind than the stall. Instead, name the specific axis of disagreement (sprint count, a contested seam, sequencing order) as the blocker, and ask the user to decide that axis directly or to defer scaffolding until the slicing question is resolved. Scaffolding is not the goal; an agreed slicing is.
+
+**Draft-first mode.** The confirm-first default can be flipped: when the user's inline instructions or a Trellis instruction file (`~/.trellis/instructions.md` / `<repo-root>/.trellis/instructions.md`) say to draft first (e.g., *"always draft first — I'll react to the files"*, or *"just scaffold it"* in this invocation), skip Step B's wait entirely: proceed to Step C, capture the slicing decisions you made unilaterally as `(R1)` entries in `decisions.md`, and present the Step B roster + dependency-graph summary *after* the files land (in the hand-off) so the user reacts to a concrete scaffold instead of a proposal. Reshaping a Round 1 scaffold is cheap for an agent; the confirmation round-trip is the expensive part for a user who has already said they prefer momentum. Re-slicing in Round 2 remains the normal correction path. Confirm-first remains the default absent such an instruction.
 
 ### Step C — Scaffold files directly in `<root>`
 
@@ -223,7 +225,7 @@ What's explicitly *not* expected after Round 1:
 - **Don't merge the design plan's Decisions log into the implementation plan's.** The design plan logs what the system is; the implementation plan logs how and in what order it gets built. Cross-reference, don't merge.
 - **Don't propose a sprint sequence without surfacing alternatives** when the slicing has competing reasonable shapes. A note in Open Questions: "Sprints 06/07 could be merged or split — leaning split per analogue X; revisit in Round 2 once Sprint 06 sketches concretely."
 - **Don't impose a backend-shaped layering on a non-backend project.** Inherit the target project's architecture per [implementation-plan.md § "Architecture is inherited, not prescribed"](../specs/implementation-plan.md#architecture-is-inherited-not-prescribed) — don't invent a "manager layer" or a "schema sprint" because the precedent plans had one.
-- **Don't skip Step B.** Writing files before confirming the slicing with the user means re-shaping every file when slicing changes. The 5-minute confirmation is cheap insurance.
+- **Don't skip Step B** — unless draft-first mode applies (see Step B). Writing files before confirming the slicing with the user means re-shaping every file when slicing changes. The 5-minute confirmation is cheap insurance; skip it only when the user has explicitly opted into drafting first.
 - **Only sprint files take the `NN-` numeric prefix.** The overview file is exactly `overview.md` — no number, no `0`, no prefix of any kind. Same for `decisions.md`, `status.md`, `progress.md`, and (later) `post-mortem.md`. The `01-`, `02-`, … `NN-` pattern applies *only* to sprint files.
 - **Don't paraphrase the design plan into one giant sprint.** Re-derive sprint structure from outcomes (what ships when), not from the design plan's section list. A roster that mirrors the design plan's chapter headings isn't slicing — it's re-titling, and it loses the entire point of the implementation plan.
 - **Don't write "implementation details TBD"** anywhere in a stub. That phrase is a planning failure dressed up as humility. Either lock the call, surface it as an Open Question with rationale, or name the future round / sprint that closes it.

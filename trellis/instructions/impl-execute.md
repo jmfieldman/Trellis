@@ -1,7 +1,7 @@
 ---
 name: impl-execute
 description: Execute a range of implementation-plan steps from a sprint file
-argument-hint: <sprint-path> <from-step> [<to-step>]
+argument-hint: <sprint-path> [<from-step>] [<to-step>]
 disable-model-invocation: true
 ---
 
@@ -60,16 +60,17 @@ The orchestrator still enforces a clean working tree, committed execution record
 Extract up to three values from the user's natural-language invocation:
 
 - `<sprint-path>` — absolute or repo-relative path to a single sprint file (e.g. `docs/features/refunds/03-payment-refund-pathway.md`).
-- `<from-step>` — first step number (inclusive) to execute, e.g. `3`.
+- `<from-step>` — first step number (inclusive) to execute, e.g. `3`. **Optional** — see the default rules below.
 - `<to-step>` — last step number (inclusive) to execute, e.g. `5`. **Optional.**
 
 Argument shape rules:
 
 - If `<sprint-path>` is missing, tell the user the invocation is missing the sprint path and stop.
-- If `<from-step>` is missing, tell the user the invocation is missing the from-step number and stop.
-- If `<to-step>` is missing **or** equals `<from-step>`, treat the range as a single step (`from = to = <from-step>`).
+- **If both step numbers are missing** — the user said "execute the sprint," "execute the rest of Sprint 03," "continue the sprint," or just named the sprint file — the range defaults to **the remainder of the sprint**: `from` = the first unchecked (`[ ]`) step in the sprint file's `## Progress` checklist, `to` = the last step in the sprint. If every step is already `[x]`, report that the sprint is complete and stop. Echo the resolved range back to the user in the pre-flight output (*"Executing Steps 4–9 (the remaining unchecked steps)"*) so a surprise range is visible before work starts.
+- **If the user asked for "the next step"** (no number), treat it as a single step: `from = to =` the first unchecked step.
+- If `<from-step>` is given and `<to-step>` is missing **or** equals `<from-step>`, treat the range as a single step (`from = to = <from-step>`).
 - If `<to-step> < <from-step>`, tell the user the range is invalid (`from > to`) and stop. Do not silently swap.
-- Step numbers must be non-negative integers. Reject anything else.
+- Step numbers, when given, must be non-negative integers. Reject anything else.
 
 Treat the user's invocation as final on argument shape — do not ask follow-up questions about them once they are provided; if shape is invalid, stop with a clear error.
 
@@ -243,7 +244,7 @@ Do not run the subagent in the background — its result gates the next step.
 
 When the subagent returns:
 
-1. **Parse the YAML summary block.** If the response is missing the block or is malformed, stop and report — the subagent violated its summary contract.
+1. **Parse the YAML summary block.** If the response is missing the block or the block is malformed, make **one bounded retry** before declaring a violation: a malformed hand-back is a *message* defect, not (yet) evidence of a repo-state defect — the step's work may be committed and fine. Send the executor a follow-up asking it to re-emit exactly the fenced YAML block and nothing else (use the harness's continue/reply mechanism for the same subagent; do **not** dispatch a fresh executor — a fresh agent would redo the implementation). One retry only. If the block is still missing/malformed, or the harness cannot continue a subagent, stop and report the summary-contract violation — and include the objective state (`git status --porcelain=v1`, `git log --oneline -5`) so the user can see what the step actually left behind.
 2. **If `status: stopped`**, surface the `stop_reason` to the user and stop the loop. Do not auto-retry. The subagent halted intentionally; the user picks the next move (re-invoke, manually fix, plan-round, etc.). Before stopping, recover and report the partial state so the user isn't left guessing:
    - Run `git status --porcelain=v1` and report whether the tree is **clean** or **dirty** (show the offending lines if dirty — a dirty tree on a stop means the executor left work behind and the user must clean it before re-invoking).
    - Report **which commits landed** this step (the `commits:` list from the hand-back, cross-checked against `git log --oneline`) — a stop can happen before *or* after commits exist, and the user needs to know which.

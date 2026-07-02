@@ -80,6 +80,7 @@ Parameters:
 - The question: <number + full text + severity tag, or [untagged] when missing in source>
 - Proposed resolution: <your verdict, recommended option, the alternatives with pros/cons, your stated basis, your confidence>
 - Sibling questions: <the other questions being resolved in this run>
+- Upstream decided answers: <question N → decided option, exactly as the orchestrator passed them to you, or "(none)">
 - Design plan path: <root>/design.md
 
 Additional user instructions (forwarded; override the brief on conflict):

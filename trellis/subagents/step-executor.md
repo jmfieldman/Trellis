@@ -43,6 +43,8 @@ Create `<execution-record-path>` (and any missing parent directories — typical
 **Executor:** <model / name if known, otherwise "unspecified">
 ```
 
+Obtain every timestamp in this record by running `date -u +%Y-%m-%dT%H:%M:%SZ` — never guess or fabricate the time. This applies to the `Started:` header, any re-run header, and the `Finished:` line in Final state.
+
 **If the file already exists** — the deterministic path `<root>/reviews/<sprint-stem>/step-<N>.md` means a re-invocation of an already-attempted step (e.g., the prior attempt stopped on a reviewer block or a plan-wrongness halt) lands on the same path. Do **not** overwrite or truncate it: the prior attempt's record is part of the audit trail. Instead **append** a run divider and a fresh run header, then write this attempt's sections below it:
 
 ```markdown
